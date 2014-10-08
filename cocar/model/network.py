@@ -27,11 +27,7 @@ class Network(Cocar):
         self.netmask = netmask
         self.prefixlen = prefixlen
         self.name = name
-        self.network_dir = self.cocar_data_dir + "/" + str(self.network_ip.ip)
-        # Cria diretório se não existir
-        if not os.path.isdir(self.network_dir):
-            os.mkdir(self.network_dir)
-
+        self.network_file = self.cocar_data_dir + "/" + str(self.network_ip.ip) + ".xml"
         if self.netmask is None:
             self.netmask = self.network_ip.netmask
         if self.prefixlen is None:

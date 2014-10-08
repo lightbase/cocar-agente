@@ -10,12 +10,11 @@ class Host(object):
     """
     def __init__(self,
                  ip_address,
-                 mac_address,
-                 network,
+                 mac_address=None,
                  hostname=None,
                  inclusion_date=None,
                  scantime=None,
-                 open_ports=[]):
+                 open_ports=None):
         """
         Método construtor do ativo de rede
 
@@ -30,7 +29,6 @@ class Host(object):
         """
         self.ip_address = IPAddress(ip_address)
         self.mac_address = mac_address
-        self.network = network
         self.hostname = hostname
         self.inclusion_date = inclusion_date
         self.scantime = scantime

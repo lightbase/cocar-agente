@@ -10,11 +10,13 @@ class Computer(Host):
     Ativo de rede identificado como estação de trabalho
     """
     def __init__(self,
-                 so
+                 so,
+                 *args,
+                 **kwargs
                  ):
         """
         Classe que identifica uma estação de trabalho
         :param so: Sistema Operacional encontrado
         """
-        Host.__init__(self)
+        Host.__init__(self, *args, **kwargs)
         self.so = so

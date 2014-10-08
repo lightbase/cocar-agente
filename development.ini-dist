@@ -1,9 +1,12 @@
 [cocar]
 data_dir = /srv/cocar-agente/cocar_data
 
+[sqlalchemy]
+url = sqlite:////srv/cocar-agente/cocar-data/tests/cocar-test.db
+
 # Begin logging configuration
 [loggers]
-keys = root, cocar
+keys = root, cocar, sqlalchemy
 
 [handlers]
 keys = console
@@ -19,6 +22,11 @@ handlers = console
 level = DEBUG
 handlers =
 qualname = lbgenerator
+
+[logger_sqlalchemy]
+level = INFO
+handlers =
+qualname = sqlalchemy.engine
 
 [handler_console]
 class = StreamHandler

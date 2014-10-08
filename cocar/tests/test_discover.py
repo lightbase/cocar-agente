@@ -5,6 +5,7 @@ __author__ = 'eduardo'
 import unittest
 import os
 import os.path
+import shutil
 from ..session import Host, SnmpSession, NmapSession
 from .. import Cocar
 from ..model import network
@@ -66,52 +67,30 @@ class TestDiscover(unittest.TestCase):
         """
         Realiza busca em todos os IP's da rede e grava resultados num arquivo específico
         """
-        ip_list = self.network.ip_list()
-        i = 0
-        for ip in ip_list:
-            outfile = self.network.network_dir + "/" + str(ip) + ".xml"
-            #print(outfile)
-            session = NmapSession(ip, outfile=outfile)
-            session.scan()
-            i += 1
-            if i > 10:
-                break
+        session = NmapSession(self.network.network_ip.cidr)
+        session.scan()
 
         # List all IP's from directory
-        onlyfiles = [ f for f in os.listdir(self.network.network_dir) if os.path.isfile(os.path.join(self.network.network_dir, f)) ]
+        self.assertTrue(os.path.isfile(session.outfile))
 
-        # Funciona se encontrar pelo menos um arquivo
-        self.assertGreater(len(onlyfiles), 0)
-
-        # Apaga diretório
-        os.rmdir(self.network.network_dir)
+        # Apaga arquivo
+        os.unlink(session.outfile)
 
     def test_scan_rede(self):
         """
         Realiza busca rápida em todos os IP's da rede e grava resultados num arquivo específico
         """
-        ip_list = self.network.ip_list()
-        i = 0
-        for ip in ip_list:
-            outfile = self.network.network_dir + "/" + str(ip) + ".xml"
-            #print(outfile)
-            session = NmapSession(ip, outfile=outfile, full=False)
-            session.scan()
-            i += 1
-            if i > 10:
-                break
+        session = NmapSession(self.network.network_ip.cidr, full=False)
+        session.scan()
 
         # List all IP's from directory
-        onlyfiles = [ f for f in os.listdir(self.network.network_dir) if os.path.isfile(os.path.join(self.network.network_dir, f)) ]
+        self.assertTrue(os.path.isfile(session.outfile))
 
-        # Funciona se encontrar pelo menos um arquivo
-        self.assertGreater(len(onlyfiles), 0)
-
-        # Apaga diretório
-        os.rmdir(self.network.network_dir)
+        # Apaga arquivo
+        #os.unlink(session.outfile)
 
     def tearDown(self):
         """
         Apaga dados inicias
         """
-        #os.rmdir(self.data_dir)
+        #shutil.rmtree(self.data_dir)

@@ -81,7 +81,7 @@ class NmapSession(Cocar):
         if outfile is not None:
             self.outfile = outfile
         else:
-            self.outfile = self.cocar_data_dir + "/" + str(self.host) + ".xml"
+            self.outfile = self.cocar_data_dir + "/" + str(self.host).replace("/", "-") + ".xml"
 
     def scan(self):
         """
@@ -90,20 +90,22 @@ class NmapSession(Cocar):
         """
         try:
             if self.full:
-                scanv = subprocess.Popen(["nmap",
+                scanv = subprocess.Popen(["sudo",
+                                          "nmap",
                                           "-PR",
-                                          "-sV",
+                                          "-O",
                                           str(self.host),
                                           "-oX",
                                           self.outfile],
                                          stdout=subprocess.PIPE,
                                          stderr=subprocess.PIPE).communicate()[0]
             else:
-                scanv = subprocess.Popen(["nmap",
+                scanv = subprocess.Popen(["sudo",
+                                          "nmap",
                                           "-PE",
                                           "-PP",
                                           "-PS21,22,23,25,80,443,3306,3389,8080",
-                                          "-sV",
+                                          "-O",
                                           str(self.host),
                                           "-oX",
                                           self.outfile],
