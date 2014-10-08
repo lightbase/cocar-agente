@@ -1,0 +1,32 @@
+[cocar]
+data_dir = /srv/cocar-agente/cocar_data
+
+# Begin logging configuration
+[loggers]
+keys = root, cocar
+
+[handlers]
+keys = console
+
+[formatters]
+keys = generic
+
+[logger_root]
+level = DEBUG
+handlers = console
+
+[logger_cocar]
+level = DEBUG
+handlers =
+qualname = lbgenerator
+
+[handler_console]
+class = StreamHandler
+args = (sys.stderr,)
+level = DEBUG
+formatter = generic
+
+[formatter_generic]
+format = %(asctime)s %(levelname)-5.5s [%(name)s][%(threadName)s] %(message)s
+datefmt = %H:%M:%S
+# End logging configuration

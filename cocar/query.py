@@ -3,7 +3,7 @@
 # Inspired by the code in http://www.copyandwaste.com/posts/view/multiprocessing-snmp-with-python/
 __author__ = 'eduardo'
 
-from host import SnmpSession
+from session import SnmpSession
 from multiprocessing import Process, Queue, current_process
 
 

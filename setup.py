@@ -2,6 +2,10 @@ from distutils.core import setup
 
 requires = [
     'multiprocessing',
+    'python-nmap',
+    'ipy',
+    'netaddr',
+    'netifaces'
 ]
 
 
