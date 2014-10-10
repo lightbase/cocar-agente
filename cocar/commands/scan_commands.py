@@ -93,6 +93,9 @@ class ScanCommands(command.Command):
         if cmd == 'continous_scan':
             self.continuous_scan()
             return
+        if cmd == 'printer_scan':
+            self.printer_scan()
+            return
         else:
             log.error('Command "%s" not recognized' % (cmd,))
 
@@ -280,6 +283,17 @@ class ScanCommands(command.Command):
 
         while True:
             self.scan_networks()
+
+    def printer_scan(self):
+        """
+        Fica varrendo a rede e tenta encontrar as impressoras a cada 10min
+        """
+        print("*** Aperente CTRL+C para encerrar a execução ***")
+
+        while True:
+            self.get_printers()
+            log.info("SCAN DE IMPRESSORAS FINALIZADO!!! Dormindo...")
+            time.sleep(600)
 
 
 def make_query(host):
