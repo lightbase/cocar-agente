@@ -74,7 +74,7 @@ class TestDiscover(unittest.TestCase):
         self.assertTrue(os.path.isfile(session.outfile))
 
         # Apaga arquivo
-        os.unlink(session.outfile)
+        #os.unlink(session.outfile)
 
     def test_scan_rede(self):
         """

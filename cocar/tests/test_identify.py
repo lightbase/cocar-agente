@@ -60,8 +60,9 @@ class TestIdentify(unittest.TestCase):
         self.assertIsInstance(computer, Computer)
 
         # Se é um computer, tenho que identificar o SO
-        os_elm = computer.so.items()[0]
-        self.assertEqual(os_elm[1]['osfamily'], 'Linux')
+        self.assertEqual(computer.so_name, 'Linux')
+        self.assertEqual(computer.so_version, 'Linux 3.7 - 3.9')
+        self.assertEqual(computer.accuracy, '98')
 
     def test_identify_printer(self):
         """

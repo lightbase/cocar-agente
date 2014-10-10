@@ -7,7 +7,6 @@ import ConfigParser
 import logging
 import logging.config
 from sqlalchemy.engine import create_engine
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import scoped_session, sessionmaker
 
 
@@ -46,11 +45,8 @@ class Cocar(object):
         # SQLAlchemy
         sqlalchemy_url = self.config.get('sqlalchemy', 'url')
         self.engine = create_engine(sqlalchemy_url, echo=True)
-        self.Base = declarative_base()
-        self.Base.metadata.bind = self.engine
-        self.session = scoped_session(
+        self.Session = scoped_session(
             sessionmaker(bind=self.engine,
-                         autocommit=True,
-                         #expire_on_commit=False
-                         )
+                         autocommit=True
+            )
         )

@@ -69,7 +69,8 @@ class NmapXML(object):
                             'vendor': osclass.get('vendor'),
                             'osfamily': osclass.get('osfamily'),
                             'accuracy': osclass.get('accuracy'),
-                            'cpe': osclass.findtext('cpe')
+                            'cpe': osclass.findtext('cpe'),
+                            'version': osmatch.get('name')
                         }
 
             # General attributes
@@ -86,11 +87,12 @@ class NmapXML(object):
 
         # Ordena os sistemas operacionais por accuracy
         host = self.hosts[hostname]
-        accuracy = 0
+        accuracy = int(0)
         if host.get('os'):
             # Nesse caso já sei que é computador. Precisa identificar o OS
             for os in host['os'].keys():
                 if int(host['os'][os]['accuracy']) > accuracy:
+                    accuracy = int(host['os'][os]['accuracy'])
                     os_final = os
 
             scantime = int(host.get('endtime')) - int(host.get('starttime'))

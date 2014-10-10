@@ -4,14 +4,25 @@ __author__ = 'eduardo'
 import os.path
 from .. import Cocar
 from netaddr import IPNetwork, IPSet
+from ..model import Base
+from sqlalchemy.schema import Column
+from sqlalchemy.types import String, Integer
 
 
-class Network(Cocar):
+class Network(Base):
     """
     Rede onde a busca será realizada
     """
+    __tablename__ = 'network'
+    ip_network = Column(String(16), nullable=False, primary_key=True)
+    network_file = Column(String)
+    netmask = Column(String(16))
+    prefixlen = Column(Integer)
+    name = Column(String)
+
     def __init__(self,
                  network_ip,
+                 network_file=None,
                  netmask=None,
                  prefixlen=None,
                  name=None
@@ -22,16 +33,18 @@ class Network(Cocar):
         :param cidr: CIDR para calcular a máscara da rede
         :param name: Nome da rede
         """
-        Cocar.__init__(self)
         self.network_ip = IPNetwork(network_ip)
         self.netmask = netmask
         self.prefixlen = prefixlen
         self.name = name
-        self.network_file = self.cocar_data_dir + "/" + str(self.network_ip.ip) + ".xml"
+        self.network_file = network_file
         if self.netmask is None:
             self.netmask = self.network_ip.netmask
         if self.prefixlen is None:
             self.prefixlen = self.network_ip.prefixlen
+
+        # SQLAlchemy attribute
+        self.ip_network = str(self.network_ip.ip)
 
     def ip_list(self):
         """
