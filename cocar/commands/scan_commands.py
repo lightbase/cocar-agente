@@ -282,7 +282,12 @@ class ScanCommands(command.Command):
         print("*** Aperente CTRL+C para encerrar a execução ***")
 
         while True:
+            log.info("Iniciando scan de redes...")
             self.scan_networks()
+            log.info("Scan de redes finalizado. Iniciando procedimento de "
+                     "identificação de ativos de rede, computadores e impressoras")
+            self.load_network_files()
+            log.info("SCAN DE REDE COMPLETO FINALIZADO!!!")
 
     def printer_scan(self):
         """
