@@ -1,6 +1,7 @@
 #!/bin/env python
 # -*- coding: utf-8 -*-
 __author__ = 'eduardo'
+from iptools.ipv4 import netmask2prefix
 from netaddr import IPNetwork, IPSet
 from ..model import Base
 from sqlalchemy.schema import Column
@@ -31,7 +32,7 @@ class Network(Base):
         :param cidr: CIDR para calcular a máscara da rede
         :param name: Nome da rede
         """
-        self.network_ip = IPNetwork(network_ip)
+        self.network_ip = network_ip
         self.netmask = netmask
         self.prefixlen = prefixlen
         self.name = name
@@ -43,6 +44,19 @@ class Network(Base):
 
         # SQLAlchemy attribute
         self.ip_network = str(self.network_ip.ip)
+
+    @property
+    def network_ip(self):
+        return self._network_ip
+
+    @network_ip.setter
+    def network_ip(self, value):
+        self._network_ip = IPNetwork(value)
+        if self._network_ip.prefixlen == 32:
+            if self.netmask is not None:
+                prefixlen = netmask2prefix(self.netmask)
+                self._network_ip = IPNetwork(str(self._network_ip.ip) + "/" + str(prefixlen))
+                self.prefixlen = prefixlen
 
     def ip_list(self):
         """

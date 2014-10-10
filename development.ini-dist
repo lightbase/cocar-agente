@@ -1,5 +1,7 @@
 [cocar]
 data_dir = /srv/cocar-agente/cocar_data
+netorks_csv = /srv/cocar-agente/cocar_data/networks.csv
+processes = 4
 
 [sqlalchemy]
 url = sqlite:////srv/cocar-agente/cocar-data/tests/cocar-test.db

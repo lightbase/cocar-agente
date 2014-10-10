@@ -50,7 +50,7 @@ def main():
     for i in range(NUMBER_OF_PROCESSES):
         Process(target=worker, args=(task_queue, done_queue)).start()
 
-     # Get and print results
+    # Get and print results
     print 'Unordered results:'
     for i in range(len(hosts)):
         print '\t', done_queue.get().query

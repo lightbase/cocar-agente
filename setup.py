@@ -7,7 +7,9 @@ requires = [
     'netaddr',
     'netifaces',
     'lxml',
-    'sqlalchemy'
+    'sqlalchemy',
+    'PasteScript',
+    'iptools'
 ]
 
 
@@ -23,4 +25,9 @@ setup(
     description='Agente coletor do software Cocar',
     test_suite='cocar',
     install_requires=requires,
+    entry_points="""\
+        [paste.paster_command]
+            scan = cocar.commands:ScanCommands
+    """,
+
 )

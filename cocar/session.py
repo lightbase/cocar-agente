@@ -62,7 +62,7 @@ class SnmpSession(Cocar):
             return self.hostrec
 
 
-class NmapSession(Cocar):
+class NmapSession(object):
     """
     Realiza busca Nmap num ativo de rede
     Inspirado em https://github.com/c0r3dump3d/pylanos
@@ -75,13 +75,12 @@ class NmapSession(Cocar):
         """
         Parâmetros obrigatórios
         """
-        Cocar.__init__(self)
         self.host = host
         self.full = full
         if outfile is not None:
             self.outfile = outfile
         else:
-            self.outfile = self.cocar_data_dir + "/" + str(self.host).replace("/", "-") + ".xml"
+            self.outfile = str(self.host).replace("/", "-") + ".xml"
 
     def scan(self):
         """
