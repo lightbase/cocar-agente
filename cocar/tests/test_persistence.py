@@ -5,6 +5,7 @@ __author__ = 'eduardo'
 import unittest
 import cocar.tests
 from ..xml_utils import NmapXML
+from..csv_utils import NetworkCSV
 from ..model.computer import Computer
 from ..model.printer import Printer
 from ..model.network import Network
@@ -22,6 +23,7 @@ class TestPersistence(unittest.TestCase):
         self.network_file = cocar.tests.test_dir + "/fixtures/192.168.0.0-24.xml"
         self.localhost_file = cocar.tests.test_dir + "/fixtures/127.0.0.1.xml"
         self.printer_file = cocar.tests.test_dir + "/fixtures/printer.xml"
+        self.network_csv = cocar.tests.test_dir + "/fixtures/networks.csv"
         self.session = cocar.tests.cocar.Session
 
     def test_connect(self):
@@ -84,6 +86,23 @@ class TestPersistence(unittest.TestCase):
         self.session.add(rede)
         self.session.flush()
 
+        # Tenta ver se gravou
+        results = self.session.query(Network).first()
+        self.assertIsNotNone(results)
+
+    def test_load_networks(self):
+        """
+        Carrega no banco redes oriundas de arquivo CSV
+        """
+        network_csv = NetworkCSV(csv_file=self.network_csv)
+        network = network_csv.parse_csv()
+        self.assertIsInstance(network[0], Network)
+
+        for elm in network:
+            self.assertIsInstance(elm, Network)
+            self.session.add(elm)
+
+        self.session.flush()
         # Tenta ver se gravou
         results = self.session.query(Network).first()
         self.assertIsNotNone(results)

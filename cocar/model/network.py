@@ -1,8 +1,6 @@
 #!/bin/env python
 # -*- coding: utf-8 -*-
 __author__ = 'eduardo'
-import os.path
-from .. import Cocar
 from netaddr import IPNetwork, IPSet
 from ..model import Base
 from sqlalchemy.schema import Column
