@@ -4,10 +4,11 @@ __author__ = 'eduardo'
 
 import unittest
 import cocar.tests
+import time
 from ..xml_utils import NmapXML
 from..csv_utils import NetworkCSV
 from ..model.computer import Computer
-from ..model.printer import Printer
+from ..model.printer import Printer, PrinterCounter
 from ..model.network import Network
 
 
@@ -106,6 +107,82 @@ class TestPersistence(unittest.TestCase):
         # Tenta ver se gravou
         results = self.session.query(Network).first()
         self.assertIsNotNone(results)
+
+    def test_printer_counter(self):
+        """
+        Testa inserção do contador em uma impressora
+        """
+        hostname = '10.72.168.4'
+        ports = {
+            "9100": {
+                "state": "open",
+                "protocol": "tcp",
+                "service": "vnc-http"
+            },
+            "631": {
+                "state": "open",
+                "protocol": "tcp",
+                "service": "vnc-http"
+            }
+        }
+
+        # Agora verifica a inserção do contador
+        counter = PrinterCounter(
+            ip_address=hostname,
+            mac_address=None,
+            hostname=None,
+            inclusion_date=time.time(),
+            open_ports=ports,
+            scantime='3600',
+            model='Samsung SCX-6x55X Series',
+            serial='Z7EUBQBCB03539E',
+            description='Samsung SCX-6x55X Series; V2.00.03.01 03-23-2012;Engine 0.41.69;NIC V5.01.82(SCX-6x55X) 02-28-2012;S/N Z7EUBQBCB03539E',
+            counter=1280,
+            counter_time=time.time()
+        )
+
+        self.assertIsInstance(counter, PrinterCounter)
+        self.assertEqual(counter.counter, 1280)
+        self.assertEqual(counter.network_ip, hostname)
+
+        self.session.add(counter)
+        self.session.flush()
+        # Tenta ver se gravou
+        results = self.session.query(PrinterCounter).first()
+        self.assertIsNotNone(results)
+
+    def test_update_counter(self):
+        """
+        Testa inserção dos parâmetros do contador em impressora existente
+        """
+        hostname = '10.72.168.3'
+        nmap_xml = NmapXML(self.printer_file)
+        host = nmap_xml.parse_xml()
+        assert host
+
+        printer = nmap_xml.identify_host(hostname)
+        self.assertIsInstance(printer, Printer)
+
+        printer_counter = PrinterCounter(
+            ip_address=printer.ip_address,
+            mac_address=printer.mac_address,
+            hostname=printer.hostname,
+            inclusion_date=printer.inclusion_date,
+            open_ports=printer.open_ports,
+            scantime=printer.scantime,
+            model='Samsung SCX-6x55X Series',
+            serial='Z7EUBQBCB03539E',
+            description='Samsung SCX-6x55X Series; V2.00.03.01 03-23-2012;Engine 0.41.69;NIC V5.01.82(SCX-6x55X) 02-28-2012;S/N Z7EUBQBCB03539E',
+            counter=1280,
+            counter_time=time.time()
+        )
+
+        result = printer_counter.update_counter(self.session)
+        assert result
+
+        # Aqui não pode inserir de novo
+        result = printer_counter.update_counter(self.session)
+        self.assertFalse(result)
 
     def tearDown(self):
         """

@@ -50,10 +50,14 @@ class NmapXML(object):
             ports = element.find('ports')
             self.hosts[host]['ports'] = dict()
             for port_xml in ports.findall('port'):
+                if port_xml.find('service') is not None:
+                    service = port_xml.find('service').get('name')
+                else:
+                    service = None
                 self.hosts[host]['ports'][port_xml.get('portid')] = {
                     'protocol': port_xml.get('protocol'),
                     'state': port_xml.find('state').get('state'),
-                    'service': port_xml.find('service').get('name'),
+                    'service': service,
                 }
 
             # OS Matches

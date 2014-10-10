@@ -23,7 +23,7 @@ class Host(object):
         self.query = query
 
 
-class SnmpSession(Cocar):
+class SnmpSession(object):
     """A SNMP Session"""
     def __init__(self,
                  oid=".1.3.6.1.2.1.1.1.0",
@@ -33,7 +33,6 @@ class SnmpSession(Cocar):
                  Community="public",
                  Verbose=True,
                  ):
-        Cocar.__init__(self)
         self.oid = oid
         self.Version = Version
         self.DestHost = DestHost
@@ -42,6 +41,12 @@ class SnmpSession(Cocar):
         self.var = netsnmp.Varbind(oid, iid)
         self.hostrec = Host()
         self.hostrec.hostname = self.DestHost
+
+        self.status = ['1.3.6.1.2.1.25.3.5.1.1.1']
+        self.serial = ['1.3.6.1.2.1.43.5.1.1.17']
+        self.model = ['1.3.6.1.2.1.25.3.2.1.3.1']
+        self.counter = ['1.3.6.1.2.1.43.10.2.1.4.1.1']
+        self.messages = ['1.3.6.1.2.1.43.18.1.1.8']
 
     def query(self):
         """Creates SNMP query
@@ -60,6 +65,114 @@ class SnmpSession(Cocar):
             self.hostrec.query = None
         finally:
             return self.hostrec
+
+    def printer_full(self):
+        """
+        Retorna status full da impressora, com todos os atributos
+        """
+        status = self.query()
+        if status is None:
+            return None
+        else:
+            return status.query
+
+    def printer_status(self):
+        """
+        Retorna status da impressora
+
+        Opções de status:
+
+         1 - unknown
+         2 - runnning
+         3 - warning
+         4 - testing
+         5 - down
+        """
+        status = None
+        for elm in self.status:
+            self.oid = elm
+            status = self.query()
+            # A primeira vez que conseguir retornar um status, para
+            if status is not None:
+                break
+        if status is None:
+            return None
+        else:
+            return status.query
+
+    def printer_counter(self):
+        """
+        Retorna contador da impressora
+        """
+        status = None
+        for elm in self.counter:
+            self.oid = elm
+            status = self.query()
+            # A primeira vez que conseguir retornar um status, para
+            if status is not None:
+                break
+
+        if status is None:
+            return None
+        else:
+            return status.query
+
+    def printer_model(self):
+        """
+        Retorna contador da impressora
+        """
+        status = None
+        for elm in self.model:
+            self.oid = elm
+            status = self.query()
+            # A primeira vez que conseguir retornar um status, para
+            if status is not None:
+                break
+
+        if status is None:
+            return None
+        else:
+            return status.query
+
+    def printer_serial(self):
+        """
+        Retorna contador da impressora
+        """
+        status = None
+        for elm in self.serial:
+            self.oid = elm
+            status = self.query()
+            # A primeira vez que conseguir retornar um status, para
+            if status is not None:
+                break
+
+        if status is None:
+            return None
+        else:
+            return status.query
+
+    def printer_dict(self):
+        """
+        Retorna o status de todos os atributos em um dicionário
+        """
+        full = self.printer_full()
+        serial = self.printer_serial()
+        model = self.printer_model()
+        counter = self.printer_counter()
+        status = self.printer_status()
+
+        return_dict = {
+            'description': full[0],
+            'serial': serial[0],
+            'model': model[0],
+            'counter': counter[0],
+            'status': status[0],
+            'network_ip': self.DestHost
+        }
+
+        log.debug(return_dict)
+
+        return return_dict
 
 
 class NmapSession(object):
@@ -103,7 +216,7 @@ class NmapSession(object):
                                           "nmap",
                                           "-PE",
                                           "-PP",
-                                          "-PS21,22,23,25,80,443,3306,3389,8080",
+                                          "-PS21,22,23,25,80,443,631,3306,3389,8080,9100",
                                           "-O",
                                           str(self.host),
                                           "-oX",

@@ -47,9 +47,15 @@ class Host(Base):
 
         # Parâmetros do SQLAlchemy
         self.network_ip = str(self.ip_address)
-        self.ports = ','.join(map(str, self.open_ports.keys()))
-        if len(self.hostname.values()) > 0:
-            self.name = self.hostname.values()[0]
+        if self.open_ports is not None:
+            self.ports = ','.join(map(str, self.open_ports.keys()))
+        else:
+            self.ports = None
+        if self.hostname is not None:
+            if len(self.hostname.values()) > 0:
+                self.name = self.hostname.values()[0]
+            else:
+                self.name = None
         else:
             self.name = None
 
