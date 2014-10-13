@@ -18,6 +18,7 @@ from ..csv_utils import NetworkCSV
 from ..session import NmapSession, SnmpSession
 from multiprocessing import Process, Queue
 from ..xml_utils import NmapXML
+from sqlalchemy.exc import IntegrityError
 
 log = logging.getLogger()
 
@@ -197,7 +198,10 @@ class ScanCommands(command.Command):
                     results = session.query(Printer).filter(Printer.network_ip == hostname).first()
                     if results is None:
                         log.info("Inserindo impressora com o IP %s", hostname)
-                        session.add(host)
+                        try:
+                            session.add(host)
+                        except IntegrityError, e:
+                            log.error("Erro adicionando impressora com o IP %s. IP Repetido\n%s", hostname, e.message)
                     else:
                         log.info("Impressora com o IP %s já cadastrada", hostname)
                 elif isinstance(host, Computer):
@@ -205,7 +209,10 @@ class ScanCommands(command.Command):
                     results = session.query(Computer).filter(Computer.network_ip == hostname).first()
                     if results is None:
                         log.info("Inserindo computador com o IP %s", hostname)
-                        session.add(host)
+                        try:
+                            session.add(host)
+                        except IntegrityError, e:
+                            log.error("Erro adicionando computador com o IP %s. IP Repetido\n%s", hostname, e.message)
                     else:
                         log.info("Computador com o IP %s já cadastrado", hostname)
                 else:
@@ -213,7 +220,10 @@ class ScanCommands(command.Command):
                     results = session.query(Host).filter(Host.network_ip == hostname).first()
                     if results is None:
                         log.info("Inserindo host genérico com o IP %s", hostname)
-                        session.add(host)
+                        try:
+                            session.add(host)
+                        except IntegrityError, e:
+                            log.error("Erro adicionando host genérico com o IP %s. IP Repetido\n%s", hostname, e.message)
                     else:
                         log.info("Host genérico com o IP %s já cadastrado", hostname)
 
