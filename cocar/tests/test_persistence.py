@@ -5,11 +5,14 @@ __author__ = 'eduardo'
 import unittest
 import cocar.tests
 import time
+from mock import patch
 from ..xml_utils import NmapXML
-from..csv_utils import NetworkCSV
+from ..csv_utils import NetworkCSV
 from ..model.computer import Computer
 from ..model.printer import Printer, PrinterCounter
 from ..model.network import Network
+from . import fake_urlopen
+
 
 
 class TestPersistence(unittest.TestCase):
@@ -26,6 +29,8 @@ class TestPersistence(unittest.TestCase):
         self.printer_file = cocar.tests.test_dir + "/fixtures/printer.xml"
         self.network_csv = cocar.tests.test_dir + "/fixtures/networks.csv"
         self.session = cocar.tests.cocar.Session
+        self.patcher = patch('requests.put', fake_urlopen)
+        self.patcher.start()
 
     def test_connect(self):
         """
@@ -184,9 +189,65 @@ class TestPersistence(unittest.TestCase):
         result = printer_counter.update_counter(self.session)
         self.assertFalse(result)
 
+    def test_export_printer(self):
+        """
+        Exporta a impressora para a interface do Cocar
+        """
+        hostname = '10.72.168.3'
+        nmap_xml = NmapXML(self.printer_file)
+        host = nmap_xml.parse_xml()
+        assert host
+
+        printer = nmap_xml.identify_host(hostname)
+        self.assertIsInstance(printer, Printer)
+
+        printer_counter = PrinterCounter(
+            ip_address=printer.ip_address,
+            mac_address=printer.mac_address,
+            hostname=printer.hostname,
+            inclusion_date=printer.inclusion_date,
+            open_ports=printer.open_ports,
+            scantime=printer.scantime,
+            model='Samsung SCX-6x55X Series',
+            serial='Z7EUBQBCB03539E',
+            description='Samsung SCX-6x55X Series; V2.00.03.01 03-23-2012;Engine 0.41.69;NIC V5.01.82(SCX-6x55X) 02-28-2012;S/N Z7EUBQBCB03539E',
+            counter=1280,
+            counter_time=time.time()
+        )
+
+        result = printer_counter.update_counter(self.session)
+        assert result
+
+        # Adiciona outro contador
+        printer_counter = PrinterCounter(
+            ip_address=printer.ip_address,
+            mac_address=printer.mac_address,
+            hostname=printer.hostname,
+            inclusion_date=printer.inclusion_date,
+            open_ports=printer.open_ports,
+            scantime=printer.scantime,
+            model='Samsung SCX-6x55X Series',
+            serial='Z7EUBQBCB03539E',
+            description='Samsung SCX-6x55X Series; V2.00.03.01 03-23-2012;Engine 0.41.69;NIC V5.01.82(SCX-6x55X) 02-28-2012;S/N Z7EUBQBCB03539E',
+            counter=1290,
+            counter_time=(time.time() + 1)
+        )
+
+        result = printer_counter.update_counter(self.session)
+        assert result
+
+        # Exportar a impressora deve retornar 200
+        result = printer.export_printer(cocar.tests.cocar.config.get('cocar', 'server_url'), self.session)
+        assert result
+
+        # Não deve ter mais nenhum impressora na tabela
+        result = self.session.query(PrinterCounter).all()
+        self.assertEqual(len(result), 0)
+
     def tearDown(self):
         """
         Remove dados
         """
+        self.patcher.stop()
         self.session.close()
         pass

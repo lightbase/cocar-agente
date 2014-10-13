@@ -97,6 +97,9 @@ class ScanCommands(command.Command):
         if cmd == 'printer_scan':
             self.printer_scan()
             return
+        if cmd == 'export_printers':
+            self.export_printers()
+            return
         else:
             log.error('Command "%s" not recognized' % (cmd,))
 
@@ -312,6 +315,16 @@ class ScanCommands(command.Command):
             self.get_printers()
             log.info("SCAN DE IMPRESSORAS FINALIZADO!!! Dormindo...")
             time.sleep(600)
+
+    def export_printers(self):
+        """
+        Exporta todos os contadores para o Cocar
+        """
+        session = self.cocar.Session
+        results = session.query(Printer).all()
+        for printer in results:
+            log.info("Exportando impressora %s", printer.network_ip)
+            printer.export_printer(server_url=self.cocar.config.get('cocar', 'server_url'), session=session)
 
 
 def make_query(host):

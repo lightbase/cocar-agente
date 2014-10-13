@@ -9,7 +9,9 @@ requires = [
     'lxml',
     'sqlalchemy',
     'PasteScript',
-    'iptools'
+    'iptools',
+    'requests',
+    'mock'
 ]
 
 

@@ -2,6 +2,10 @@
 # -*- coding: utf-8 -*-
 __author__ = 'eduardo'
 import logging
+import requests
+import json
+from requests.exceptions import HTTPError
+from sqlalchemy.orm import aliased
 from .host import Host
 from sqlalchemy import ForeignKey
 from sqlalchemy.schema import Column
@@ -38,6 +42,26 @@ class Printer(Host):
         self.serial = serial
         self.description = description
 
+    def export_printer(self, server_url, session):
+        """
+        Exporta todos os contadores para a impressora
+        """
+        counter_list = session.query(
+            PrinterCounter
+        ).filter(
+            PrinterCounter.network_ip == self.network_ip
+        ).all()
+
+        for counter in counter_list:
+            result = counter.export_counter(server_url, session)
+            if result:
+                log.info("Contador %s para a impressora %s exportado com sucesso")
+            else:
+                log.error("Erro na remocao do contador %s para a impressora %s", counter.counter, self.network_ip)
+                return False
+
+        return True
+
 
 class PrinterCounter(Printer):
     """
@@ -67,9 +91,10 @@ class PrinterCounter(Printer):
         results = session.query(self.__table__).filter(
             and_(
                 self.__table__.c.counter == self.counter,
-                self.__table__.c.counter_time == self.counter_time)
-            ).first()
-        print(results)
+                self.__table__.c.counter_time == self.counter_time
+            )
+        ).first()
+        #print(results)
         if results is None:
             log.debug("Inserindo contador para impressora %s serial %s", self.network_ip, self.serial)
             session.execute(
@@ -93,3 +118,48 @@ class PrinterCounter(Printer):
 
         session.flush()
         return False
+
+    def export_counter(self, server_url, session):
+        """
+        Exporta contador da impressora para o Cocar
+
+        :param server_url: URL do servidor do Cocar
+        :param session: Sessão do banco de dados
+        :return: Verdadeiro ou falso dependendo do sucesso
+        """
+        export_url = server_url + '/api/printer/' + self.network_ip
+        counter_json = {
+            'ip_address': self.network_ip,
+            'model': self.model,
+            'serial': self.serial,
+            'description': self.description,
+            'counter': self.counter,
+            'counter_time': int(float(self.counter_time))
+        }
+
+        # Envia a requisição HTTP
+        headers = {'content-type': 'application/json'}
+        response = requests.put(
+            export_url,
+            data=json.dumps(counter_json),
+            headers=headers
+        )
+
+        try:
+            # Check if request has gone wrong
+            response.raise_for_status()
+        except HTTPError:
+            # Something got wrong, raise error
+            log.error("Erro na insercao do contador para a impressora %s\n", self.network_ip, response.text)
+            return False
+
+        if response.status_code == 200:
+            log.info("Contador para a impressora %s com contador %s"
+                     "exportado com sucesso", self.network_ip, self.counter)
+            # Remove o contador
+            session.remove(self)
+            session.flush()
+            return True
+        else:
+            log.error("Erro na remoção da impressora %s. Status code = %s", self.network_ip, response.status)
+            return False

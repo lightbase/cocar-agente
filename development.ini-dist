@@ -2,6 +2,7 @@
 data_dir = /srv/cocar-agente/cocar_data
 networks_csv = /srv/cocar-agente/cocar_data/networks.csv
 processes = 4
+server_url = http://localhost/cocar
 
 [sqlalchemy]
 url = sqlite:////srv/cocar-agente/cocar-data/tests/cocar-test.db
