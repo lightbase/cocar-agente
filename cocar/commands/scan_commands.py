@@ -200,6 +200,7 @@ class ScanCommands(command.Command):
                         log.info("Inserindo impressora com o IP %s", hostname)
                         try:
                             session.add(host)
+                            session.flush()
                         except IntegrityError, e:
                             log.error("Erro adicionando impressora com o IP %s. IP Repetido\n%s", hostname, e.message)
                     else:
@@ -211,6 +212,7 @@ class ScanCommands(command.Command):
                         log.info("Inserindo computador com o IP %s", hostname)
                         try:
                             session.add(host)
+                            session.flush()
                         except IntegrityError, e:
                             log.error("Erro adicionando computador com o IP %s. IP Repetido\n%s", hostname, e.message)
                     else:
@@ -222,12 +224,13 @@ class ScanCommands(command.Command):
                         log.info("Inserindo host genérico com o IP %s", hostname)
                         try:
                             session.add(host)
+                            session.flush()
                         except IntegrityError, e:
                             log.error("Erro adicionando host genérico com o IP %s. IP Repetido\n%s", hostname, e.message)
                     else:
                         log.info("Host genérico com o IP %s já cadastrado", hostname)
 
-                session.flush()
+                #session.flush()
 
     def get_printers(self):
         """
