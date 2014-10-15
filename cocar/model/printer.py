@@ -53,6 +53,7 @@ class Printer(Host):
         ).all()
 
         for counter in counter_list:
+            print(counter)
             result = counter.export_counter(server_url, session)
             if result:
                 log.info("Contador %s para a impressora %s exportado com sucesso")
@@ -88,6 +89,7 @@ class PrinterCounter(Printer):
         :param session: SQLAlchemy session
         :return boolean: True if inserted
         """
+        retorno = False
         results = session.query(self.__table__).filter(
             and_(
                 self.__table__.c.counter == self.counter,
@@ -104,7 +106,7 @@ class PrinterCounter(Printer):
                     counter_time=self.counter_time
                 )
             )
-            return True
+            retorno = True
 
         session.execute(
             Printer.__table__.update().values(
@@ -117,7 +119,7 @@ class PrinterCounter(Printer):
         )
 
         session.flush()
-        return False
+        return retorno
 
     def export_counter(self, server_url, session):
         """
@@ -139,7 +141,7 @@ class PrinterCounter(Printer):
 
         # Envia a requisição HTTP
         headers = {'content-type': 'application/json'}
-        response = requests.put(
+        response = requests.post(
             export_url,
             data=json.dumps(counter_json),
             headers=headers
@@ -148,16 +150,25 @@ class PrinterCounter(Printer):
         try:
             # Check if request has gone wrong
             response.raise_for_status()
-        except HTTPError:
+        except HTTPError, e:
             # Something got wrong, raise error
-            log.error("Erro na insercao do contador para a impressora %s\n", self.network_ip, response.text)
+            log.error("Erro na insercao do contador para a impressora %s\n%s", self.network_ip, response.text)
+            log.error(e.message)
             return False
 
         if response.status_code == 200:
             log.info("Contador para a impressora %s com contador %s"
                      "exportado com sucesso", self.network_ip, self.counter)
             # Remove o contador
-            session.remove(self)
+            session.execute(
+                PrinterCounter.__table__.delete().where(
+                    and_(
+                        PrinterCounter.__table__.c.network_ip == self.network_ip,
+                        PrinterCounter.__table__.c.counter == self.counter,
+                        PrinterCounter.__table__.c.counter_time == self.counter_time,
+                    )
+                )
+            )
             session.flush()
             return True
         else:

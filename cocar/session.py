@@ -32,7 +32,7 @@ class SnmpSession(object):
                  DestHost="localhost",
                  Community="public",
                  Verbose=True,
-                 Timeout=10000000
+                 Timeout=1000000
                  ):
         """
         Sessão SNMP. Links úteis:
@@ -75,7 +75,7 @@ class SnmpSession(object):
                                 Version=self.Version,
                                 DestHost=self.DestHost,
                                 Community=self.Community,
-                                Timeout=self.Timeout)
+                                Timeout=int(self.Timeout))
             self.hostrec.query = result
         except Exception, err:
             if self.Verbose:

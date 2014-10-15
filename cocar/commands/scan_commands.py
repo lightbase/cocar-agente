@@ -62,6 +62,12 @@ class ScanCommands(command.Command):
                       help='SNMP query to execute'
     )
 
+    parser.add_option('-t', '--timeout',
+                      action='store',
+                      dest='timeout',
+                      help='Timeout da consulta SNMP'
+    )
+
     def __init__(self, name):
         """
         Constructor method
@@ -249,6 +255,7 @@ class ScanCommands(command.Command):
                         log.info("Host genérico com o IP %s já cadastrado", hostname)
 
                 #session.flush()
+            session.close()
 
     def get_printers(self):
         """
@@ -272,7 +279,8 @@ class ScanCommands(command.Command):
             log.info("Coletando informacoes da impressora %s", printer.network_ip)
             #printer.network_ip = printer.ip_network
             snmp_session = SnmpSession(
-                DestHost=printer.network_ip
+                DestHost=printer.network_ip,
+                Timeout=self.options.timeout
             )
             if snmp_session is None:
                 log.error("Erro na coleta SNMP da impressora %s", printer.network_ip)
@@ -347,6 +355,8 @@ class ScanCommands(command.Command):
             log.info("Exportando impressora %s", printer.network_ip)
             printer.export_printer(server_url=self.cocar.config.get('cocar', 'server_url'), session=session)
 
+        session.close()
+
     def get_printer_attribute(self):
         """
         Retorna e grava um atributo n   o valor da impressora
@@ -363,16 +373,22 @@ class ScanCommands(command.Command):
                 Printer.network_ip == self.options.hosts
             ).all()
 
+        if len(results) == 0:
+            log.error("Impressoras não encontradas")
+            log.error(self.options.hosts)
+
         for printer in results:
             log.info("Coletando informacoes da impressora %s", printer.network_ip)
             #printer.network_ip = printer.ip_network
             snmp_session = SnmpSession(
-                DestHost=printer.network_ip
+                DestHost=printer.network_ip,
+                Timeout=self.options.timeout
             )
             if snmp_session is None:
                 log.error("Erro na coleta SNMP da impressora %s", printer.network_ip)
                 continue
             else:
+                log.info("Iniciando coleta da impressora %s", printer.network_ip)
                 printer_dict = dict()
                 if type(self.options.query != list):
                     test = self.options.query
@@ -447,6 +463,8 @@ class ScanCommands(command.Command):
                 except IntegrityError, e:
                     log.error("Erro na atualizacao das informacoes para a impressora %s\n%s", printer.network_ip, e.message)
                     continue
+
+        session.close()
 
 
 def make_query(host):
