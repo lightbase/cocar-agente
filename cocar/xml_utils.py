@@ -6,6 +6,7 @@ from lxml import etree
 import model.computer
 import model.printer
 import model.host
+from .session import SnmpSession
 
 
 class NmapXML(object):
@@ -85,14 +86,73 @@ class NmapXML(object):
 
         return True
 
-    def identify_host(self, hostname):
+    def identify_host(self,
+                      hostname,
+                      timeout=None):
         if not self.hosts:
             raise AttributeError("It is necessary do load XML file first")
 
         # Ordena os sistemas operacionais por accuracy
         host = self.hosts[hostname]
         accuracy = int(0)
-        if host.get('os'):
+        if host.get('ports'):
+            scantime = int(host.get('endtime')) - int(host.get('starttime'))
+            #FIXME: Tem que encontrar uma forma melhor de identificar a impressora
+            for value in ['9100']:
+                if value in host['ports'].keys():
+                    # Regra temporária!!! As impressoras serão identificadas pela porta 9100
+                    printer = model.printer.Printer(
+                        ip_address=hostname,
+                        mac_address=host.get('mac'),
+                        hostname=host.get('hostname'),
+                        inclusion_date=host.get('endtime'),
+                        scantime=scantime,
+                        open_ports=host['ports'],
+                    )
+
+                    return printer
+                else:
+                    # Tenta ler o contador para identificar a impressora
+                    snmp_session = SnmpSession(
+                        DestHost=hostname,
+                        Timeout=timeout
+                    )
+                    status = snmp_session.printer_counter()
+                    if status is not None:
+                        # Se conseguir ler o contador, é impressora
+                        printer = model.printer.Printer(
+                            ip_address=hostname,
+                            mac_address=host.get('mac'),
+                            hostname=host.get('hostname'),
+                            inclusion_date=host.get('endtime'),
+                            scantime=scantime,
+                            open_ports=host['ports'],
+                        )
+                        return printer
+                    else:
+                        # Desiste e retorna host genérico
+                        host = model.host.Host(
+                            ip_address=hostname,
+                            mac_address=host.get('mac'),
+                            hostname=host.get('hostname'),
+                            inclusion_date=host.get('endtime'),
+                            scantime=scantime,
+                            open_ports=host['ports'],
+                        )
+
+                        return host
+            else:
+                host = model.host.Host(
+                    ip_address=hostname,
+                    mac_address=host.get('mac'),
+                    hostname=host.get('hostname'),
+                    inclusion_date=host.get('endtime'),
+                    scantime=scantime,
+                    open_ports=host['ports'],
+                )
+
+                return host
+        elif host.get('os'):
             # Nesse caso já sei que é computador. Precisa identificar o OS
             for os in host['os'].keys():
                 if int(host['os'][os]['accuracy']) > accuracy:
@@ -111,33 +171,6 @@ class NmapXML(object):
             )
 
             return computer
-        elif host.get('ports'):
-            scantime = int(host.get('endtime')) - int(host.get('starttime'))
-            #FIXME: Tem que encontrar uma forma melhor de identificar a impressora
-            for value in ['9100']:
-                if value in host['ports'].keys():
-                    # Regra temporária!!! As impressoras serão identificadas pela porta 9100
-                    printer = model.printer.Printer(
-                        ip_address=hostname,
-                        mac_address=host.get('mac'),
-                        hostname=host.get('hostname'),
-                        inclusion_date=host.get('endtime'),
-                        scantime=scantime,
-                        open_ports=host['ports'],
-                    )
-
-                    return printer
-            else:
-                host = model.host.Host(
-                    ip_address=hostname,
-                    mac_address=host.get('mac'),
-                    hostname=host.get('hostname'),
-                    inclusion_date=host.get('endtime'),
-                    scantime=scantime,
-                    open_ports=host['ports'],
-                )
-
-                return host
         else:
             # Não foi possível identificar. Só gera um host genérico
             scantime = int(host.get('endtime')) - int(host.get('starttime'))

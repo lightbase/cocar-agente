@@ -4,7 +4,9 @@ __author__ = 'eduardo'
 
 import unittest
 import cocar.tests
+import requests
 import time
+import json
 from mock import patch
 from ..xml_utils import NmapXML
 from ..csv_utils import NetworkCSV
@@ -243,6 +245,26 @@ class TestPersistence(unittest.TestCase):
         # Não deve ter mais nenhum impressora na tabela
         result = self.session.query(PrinterCounter).all()
         self.assertEqual(len(result), 0)
+
+    def test_import_printers(self):
+        """
+        Testa importação da rede
+        """
+        cocar_url = cocar.tests.cocar.config.get('cocar', 'server_url')
+        printers_url = cocar_url + '/api/printer'
+        result = requests.get(printers_url)
+        self.assertEqual(result.status_code, 200)
+
+        result_json = result.json()
+        self.assertGreater(len(result_json), 0)
+
+        for elm in result_json['printers']:
+            printer = Printer(
+                ip_address=elm['network_ip']
+            )
+
+            self.session.add(printer)
+            self.session.flush()
 
     def tearDown(self):
         """

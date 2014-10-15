@@ -7,6 +7,7 @@ import os.path
 import lxml.etree
 import time
 import pickle
+import requests
 from paste.script import command
 from .. import Cocar
 from ..model import Base
@@ -68,6 +69,12 @@ class ScanCommands(command.Command):
                       help='Timeout da consulta SNMP'
     )
 
+    parser.add_option('-n', '--networks',
+                      action='store',
+                      dest='networks',
+                      help='Arquivo individual de rede para ser carregado'
+    )
+
     def __init__(self, name):
         """
         Constructor method
@@ -120,6 +127,12 @@ class ScanCommands(command.Command):
             return
         if cmd == 'get_printer_attribute':
             self.get_printer_attribute()
+            return
+        if cmd == 'load_file':
+            self.load_file()
+            return
+        if cmd == 'import_printers':
+            self.import_printers()
             return
         else:
             log.error('Command "%s" not recognized' % (cmd,))
@@ -198,64 +211,8 @@ class ScanCommands(command.Command):
         :return:
         """
         onlyfiles = [ f for f in os.listdir(self.networks_dir) if os.path.isfile(os.path.join(self.networks_dir, f)) ]
-        for i in range(len(onlyfiles)):
-            network_file = self.networks_dir + "/" + onlyfiles[i]
-            log.info("Processando arquivo de rede %s", network_file)
-            nmap_xml = NmapXML(network_file)
-            try:
-                host_dict = nmap_xml.parse_xml()
-            except AttributeError, e:
-                log.error("Erro realizando parsing do arquivo %s\n%s", network_file, e.message)
-                continue
-            except lxml.etree.XMLSyntaxError, e:
-                log.error("Erro realizando parsing do arquivo %s\n%s", network_file, e.message)
-                continue
-
-            if not host_dict:
-                log.error("File %s not found", network_file)
-                continue
-            session = self.cocar.Session
-            for hostname in nmap_xml.hosts.keys():
-                host = nmap_xml.identify_host(hostname)
-                if isinstance(host, Printer):
-                    # Vê se a impressora já está na base
-                    results = session.query(Printer).filter(Printer.network_ip == hostname).first()
-                    if results is None:
-                        log.info("Inserindo impressora com o IP %s", hostname)
-                        try:
-                            session.add(host)
-                            session.flush()
-                        except IntegrityError, e:
-                            log.error("Erro adicionando impressora com o IP %s. IP Repetido\n%s", hostname, e.message)
-                    else:
-                        log.info("Impressora com o IP %s já cadastrada", hostname)
-                elif isinstance(host, Computer):
-                    # Vê se o host já está na base
-                    results = session.query(Computer).filter(Computer.network_ip == hostname).first()
-                    if results is None:
-                        log.info("Inserindo computador com o IP %s", hostname)
-                        try:
-                            session.add(host)
-                            session.flush()
-                        except IntegrityError, e:
-                            log.error("Erro adicionando computador com o IP %s. IP Repetido\n%s", hostname, e.message)
-                    else:
-                        log.info("Computador com o IP %s já cadastrado", hostname)
-                else:
-                    # Insere host genérico
-                    results = session.query(Host).filter(Host.network_ip == hostname).first()
-                    if results is None:
-                        log.info("Inserindo host genérico com o IP %s", hostname)
-                        try:
-                            session.add(host)
-                            session.flush()
-                        except IntegrityError, e:
-                            log.error("Erro adicionando host genérico com o IP %s. IP Repetido\n%s", hostname, e.message)
-                    else:
-                        log.info("Host genérico com o IP %s já cadastrado", hostname)
-
-                #session.flush()
-            session.close()
+        self.options.networks = onlyfiles
+        return self.load_file()
 
     def get_printers(self):
         """
@@ -463,6 +420,115 @@ class ScanCommands(command.Command):
                 except IntegrityError, e:
                     log.error("Erro na atualizacao das informacoes para a impressora %s\n%s", printer.network_ip, e.message)
                     continue
+
+        session.close()
+
+    def load_file(self):
+        """
+        Load printers from networks files
+        :return:
+        """
+        onlyfiles = list()
+        if type(self.options.networks) == list:
+            for elm in self.options.networks:
+                onlyfiles.append(elm)
+        else:
+            onlyfiles.append(self.options.networks)
+
+        for i in range(len(onlyfiles)):
+            network_file = self.networks_dir + "/" + onlyfiles[i]
+            log.info("Processando arquivo de rede %s", network_file)
+            nmap_xml = NmapXML(network_file)
+            try:
+                host_dict = nmap_xml.parse_xml()
+            except AttributeError, e:
+                log.error("Erro realizando parsing do arquivo %s\n%s", network_file, e.message)
+                continue
+            except lxml.etree.XMLSyntaxError, e:
+                log.error("Erro realizando parsing do arquivo %s\n%s", network_file, e.message)
+                continue
+
+            if not host_dict:
+                log.error("File %s not found", network_file)
+                continue
+            session = self.cocar.Session
+            for hostname in nmap_xml.hosts.keys():
+                host = nmap_xml.identify_host(hostname, timeout=self.options.timeout)
+                if isinstance(host, Printer):
+                    # Vê se a impressora já está na base
+                    results = session.query(Printer).filter(Printer.network_ip == hostname).first()
+                    if results is None:
+                        log.info("Inserindo impressora com o IP %s", hostname)
+                        try:
+                            session.add(host)
+                            session.flush()
+                        except IntegrityError, e:
+                            log.error("Erro adicionando impressora com o IP %s. IP Repetido\n%s", hostname, e.message)
+                            # Pode haver um host cadastrado que não havia sido identificado como impressora
+                            teste = session.query(Host).filter(Host.network_ip == hostname).first()
+                            if teste is not None:
+                                # Adiciona a impressora
+                                session.execute(
+                                    Printer.__table__.insert().values(
+                                        network_ip=hostname
+                                    )
+                                )
+                                session.flush()
+                                log.info("Impressora %s adicionada novamente com sucesso", hostname)
+                            else:
+                                log.error("ERRO!!! Host não encontrado com o IP!!! %s", hostname)
+                    else:
+                        log.info("Impressora com o IP %s já cadastrada", hostname)
+                elif isinstance(host, Computer):
+                    # Vê se o host já está na base
+                    results = session.query(Computer).filter(Computer.network_ip == hostname).first()
+                    if results is None:
+                        log.info("Inserindo computador com o IP %s", hostname)
+                        try:
+                            session.add(host)
+                            session.flush()
+                        except IntegrityError, e:
+                            log.error("Erro adicionando computador com o IP %s. IP Repetido\n%s", hostname, e.message)
+                    else:
+                        log.info("Computador com o IP %s já cadastrado", hostname)
+                else:
+                    # Insere host genérico
+                    results = session.query(Host).filter(Host.network_ip == hostname).first()
+                    if results is None:
+                        log.info("Inserindo host genérico com o IP %s", hostname)
+                        try:
+                            session.add(host)
+                            session.flush()
+                        except IntegrityError, e:
+                            log.error("Erro adicionando host genérico com o IP %s. IP Repetido\n%s", hostname, e.message)
+                    else:
+                        log.info("Host genérico com o IP %s já cadastrado", hostname)
+
+                #session.flush()
+            session.close()
+
+    def import_printers(self):
+        """
+        Importa impressoras já cadastradas e não presentes na base local
+        :return:
+        """
+
+        cocar_url = self.cocar.config.get('cocar', 'server_url')
+        printers_url = cocar_url + '/api/printer'
+        result = requests.get(printers_url)
+        result_json = result.json()
+        session = self.cocar.Session
+
+        for elm in result_json['printers']:
+            printer = Printer(
+                ip_address=elm['network_ip']
+            )
+
+            try:
+                session.add(printer)
+                session.flush()
+            except IntegrityError, e:
+                log.info("Impressora %s já cadastrada", elm['network_ip'])
 
         session.close()
 
