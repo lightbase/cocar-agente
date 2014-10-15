@@ -299,8 +299,11 @@ class ScanCommands(command.Command):
 
         while True:
             self.get_printers()
-            log.info("SCAN DE IMPRESSORAS FINALIZADO!!! Dormindo...")
-            time.sleep(600)
+            log.info("SCAN DE IMPRESSORAS FINALIZADO!!! Iniciando export de coletores")
+
+            self.export_printers()
+            log.info("EXPORT DE IMPRESSORAS FINALIZADO!!! Reiniciando as coletas")
+            #time.sleep(600)
 
     def export_printers(self):
         """
@@ -528,7 +531,7 @@ class ScanCommands(command.Command):
                 session.add(printer)
                 session.flush()
             except IntegrityError, e:
-                log.info("Impressora %s já cadastrada", elm['network_ip'])
+                log.info("Impressora %s ja cadastrada", elm['network_ip'])
 
         session.close()
 
