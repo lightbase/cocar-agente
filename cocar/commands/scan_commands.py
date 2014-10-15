@@ -50,6 +50,18 @@ class ScanCommands(command.Command):
                       help='Full scan or regular scan'
     )
 
+    parser.add_option('-i', '--ip',
+                      action='store',
+                      dest='hosts',
+                      help='Hosts list to scan'
+    )
+
+    parser.add_option('-q', '--query',
+                      action='store',
+                      dest='query',
+                      help='SNMP query to execute'
+    )
+
     def __init__(self, name):
         """
         Constructor method
@@ -99,6 +111,9 @@ class ScanCommands(command.Command):
             return
         if cmd == 'export_printers':
             self.export_printers()
+            return
+        if cmd == 'get_printer_attribute':
+            self.get_printer_attribute()
             return
         else:
             log.error('Command "%s" not recognized' % (cmd,))
@@ -246,7 +261,13 @@ class ScanCommands(command.Command):
         done_queue = Queue()
 
         session = self.cocar.Session
-        results = session.query(Printer).all()
+        if self.options.hosts is None:
+            results = session.query(Printer).all()
+        else:
+            results = session.query(Printer).filter(
+                Printer.network_ip.in_(self.options.hosts)
+            ).all()
+
         for printer in results:
             log.info("Coletando informacoes da impressora %s", printer.network_ip)
             #printer.network_ip = printer.ip_network
@@ -325,6 +346,107 @@ class ScanCommands(command.Command):
         for printer in results:
             log.info("Exportando impressora %s", printer.network_ip)
             printer.export_printer(server_url=self.cocar.config.get('cocar', 'server_url'), session=session)
+
+    def get_printer_attribute(self):
+        """
+        Retorna e grava um atributo n   o valor da impressora
+        """
+        session = self.cocar.Session
+        if self.options.hosts is None:
+            results = session.query(Printer).all()
+        elif type(self.options.hosts) == list:
+            results = session.query(Printer).filter(
+                Printer.network_ip.in_(self.options.hosts)
+            ).all()
+        else:
+            results = session.query(Printer).filter(
+                Printer.network_ip == self.options.hosts
+            ).all()
+
+        for printer in results:
+            log.info("Coletando informacoes da impressora %s", printer.network_ip)
+            #printer.network_ip = printer.ip_network
+            snmp_session = SnmpSession(
+                DestHost=printer.network_ip
+            )
+            if snmp_session is None:
+                log.error("Erro na coleta SNMP da impressora %s", printer.network_ip)
+                continue
+            else:
+                printer_dict = dict()
+                if type(self.options.query != list):
+                    test = self.options.query
+                    self.options.query = list()
+                    self.options.query.append(test)
+
+                for i in range(len(self.options.query)):
+                    if self.options.query[i] == 'description':
+                        status = snmp_session.printer_full()
+                        printer_dict['description'] = status
+                    elif self.options.query[i] == 'serial':
+                        status = snmp_session.printer_serial()
+                        printer_dict['serial'] = status
+                    elif self.options.query[i] == 'model':
+                        status = snmp_session.printer_model()
+                        printer_dict['model'] = status
+                    elif self.options.query[i] == 'counter':
+                        status = snmp_session.printer_counter()
+                        printer_dict['counter'] = status
+                    elif self.options.query[i] == 'status':
+                        status = snmp_session.printer_status()
+                        printer_dict['status'] = status
+                log.debug(printer_dict)
+                try:
+                    log.debug("Atualizando informacoes da impressora %s", printer.network_ip)
+                    log.debug(printer_dict)
+
+                    if printer_dict.get('counter') is not None:
+
+                        printer_counter = PrinterCounter(
+                            ip_address=printer.network_ip,
+                            counter=printer_dict['counter'],
+                            counter_time=time.time()
+                        )
+
+                        if printer_dict.get('model') is not None:
+                            printer_counter.model = printer_dict['model']
+                            printer.model = printer_dict['model']
+
+                        if printer_dict.get('serial') is not None:
+                            printer_counter.serial = printer_dict['serial']
+                            printer.serial = printer_dict['serial']
+
+                        if printer_dict.get('description') is not None:
+                            printer_counter.description = printer_dict['description']
+                            printer.description = printer_dict['description']
+
+                        # Para esse caso atualiza o contador
+                        printer_counter.update_counter(session)
+                    else:
+                        # Nesse caso só atualizo a impressora
+                        if printer_dict.get('model') is not None:
+                            printer.model = printer_dict['model']
+
+                        if printer_dict.get('serial') is not None:
+                            printer.serial = printer_dict['serial']
+
+                        if printer_dict.get('description') is not None:
+                            printer.description = printer_dict['description']
+
+                    session.execute(
+                        Printer.__table__.update().values(
+                            model=printer.model,
+                            description=printer.description,
+                            serial=printer.serial
+                        ).where(
+                            Printer.__table__.c.network_ip == printer.network_ip
+                        )
+                    )
+                    session.flush()
+
+                except IntegrityError, e:
+                    log.error("Erro na atualizacao das informacoes para a impressora %s\n%s", printer.network_ip, e.message)
+                    continue
 
 
 def make_query(host):

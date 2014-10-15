@@ -33,6 +33,17 @@ class SnmpSession(object):
                  Community="public",
                  Verbose=True,
                  ):
+        """
+        Sessão SNMP. Links úteis:
+        Lista de MIB's para impressoras: http://www.lprng.com/DISTRIB/SNMPTOOLS/snmp_stuff/test_printer/npstatlib.pm
+
+        :param oid: MIB SNMP
+        :param iid: Não sei
+        :param Version: Versão do protocolo
+        :param DestHost: Endereço para consulta
+        :param Community: Community para consulta
+        :param Verbose: Verbose
+        """
         self.oid = oid
         self.Version = Version
         self.DestHost = DestHost
@@ -42,11 +53,15 @@ class SnmpSession(object):
         self.hostrec = Host()
         self.hostrec.hostname = self.DestHost
 
-        self.status = ['1.3.6.1.2.1.25.3.5.1.1.1']
-        self.serial = ['1.3.6.1.2.1.43.5.1.1.17']
-        self.model = ['1.3.6.1.2.1.25.3.2.1.3.1']
-        self.counter = ['1.3.6.1.2.1.43.10.2.1.4.1.1']
-        self.messages = ['1.3.6.1.2.1.43.18.1.1.8']
+        self.status = ['.1.3.6.1.2.1.25.3.5.1.1.1']
+        self.serial = ['.1.3.6.1.2.1.43.5.1.1.17',
+                       '.1.3.6.1.2.1.43.5.1.1.17.1',
+                       '1.3.6.1.4.1.641.2.1.2.1.6.1',
+                       '1.3.6.1.4.1.11.2.3.9.4.2.1.1.3.3.0']
+        self.model = ['.1.3.6.1.2.1.25.3.2.1.3.1',
+                      '.1.3.6.1.4.1.641.2.1.2.1.2.1']
+        self.counter = ['.1.3.6.1.2.1.43.10.2.1.4.1.1']
+        self.messages = ['.1.3.6.1.2.1.43.18.1.1.8']
 
     def query(self):
         """Creates SNMP query
@@ -71,10 +86,14 @@ class SnmpSession(object):
         Retorna status full da impressora, com todos os atributos
         """
         status = self.query()
-        if status is None:
-            return None
-        else:
-            return status.query
+
+        if status.query is not None:
+            for response in status.query:
+                if response is not None:
+                    return response
+
+        # Se chegou até aqui não encontrou nenhum resultado
+        return None
 
     def printer_status(self):
         """
@@ -88,68 +107,65 @@ class SnmpSession(object):
          4 - testing
          5 - down
         """
-        status = None
         for elm in self.status:
-            self.oid = elm
+            self.var = netsnmp.Varbind(elm, iid=None)
             status = self.query()
             # A primeira vez que conseguir retornar um status, para
-            if status is not None:
-                break
-        if status is None:
-            return None
-        else:
-            return status.query
+            if status.query is not None:
+                for response in status.query:
+                    if response is not None:
+                        return response
+
+        # Se chegou até aqui não encontrou nenhum resultado
+        return None
 
     def printer_counter(self):
         """
         Retorna contador da impressora
         """
-        status = None
         for elm in self.counter:
-            self.oid = elm
+            self.var = netsnmp.Varbind(elm, iid=None)
             status = self.query()
             # A primeira vez que conseguir retornar um status, para
-            if status is not None:
-                break
+            if status.query is not None:
+                for response in status.query:
+                    if response is not None:
+                        return response
 
-        if status is None:
-            return None
-        else:
-            return status.query
+        # Se chegou até aqui não encontrou nenhum resultado
+        return None
 
     def printer_model(self):
         """
         Retorna contador da impressora
         """
-        status = None
         for elm in self.model:
-            self.oid = elm
+            self.var = netsnmp.Varbind(elm, iid=None)
             status = self.query()
             # A primeira vez que conseguir retornar um status, para
-            if status is not None:
-                break
+            if status.query is not None:
+                for response in status.query:
+                    if response is not None:
+                        return response
 
-        if status is None:
-            return None
-        else:
-            return status.query
+        # Se chegou até aqui não encontrou nenhum resultado
+        return None
 
     def printer_serial(self):
         """
         Retorna contador da impressora
         """
-        status = None
         for elm in self.serial:
-            self.oid = elm
+            self.var = netsnmp.Varbind(elm, iid=None)
             status = self.query()
             # A primeira vez que conseguir retornar um status, para
-            if status is not None:
-                break
+            if status.query is not None:
+                for response in status.query:
+                    if response is not None:
+                        return response
 
-        if status is None:
-            return None
-        else:
-            return status.query
+        # Se chegou até aqui não encontrou nenhum resultado
+        return None
 
     def printer_dict(self):
         """
@@ -162,14 +178,15 @@ class SnmpSession(object):
         status = self.printer_status()
 
         return_dict = {
-            'description': full[0],
-            'serial': serial[0],
-            'model': model[0],
-            'counter': counter[0],
-            'status': status[0],
+            'description': full,
+            'serial': serial,
+            'model': model,
+            'counter': counter,
+            'status': status,
             'network_ip': self.DestHost
         }
 
+        log.debug("COLETA DE IMPRESSORAS CONCLUÍDA!!! Retornando dicionário de informações")
         log.debug(return_dict)
 
         return return_dict
