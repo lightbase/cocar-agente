@@ -32,6 +32,7 @@ class SnmpSession(object):
                  DestHost="localhost",
                  Community="public",
                  Verbose=True,
+                 Timeout=10000000
                  ):
         """
         Sessão SNMP. Links úteis:
@@ -49,6 +50,7 @@ class SnmpSession(object):
         self.DestHost = DestHost
         self.Community = Community
         self.Verbose = Verbose
+        self.Timeout = Timeout
         self.var = netsnmp.Varbind(oid, iid)
         self.hostrec = Host()
         self.hostrec.hostname = self.DestHost
@@ -56,8 +58,8 @@ class SnmpSession(object):
         self.status = ['.1.3.6.1.2.1.25.3.5.1.1.1']
         self.serial = ['.1.3.6.1.2.1.43.5.1.1.17',
                        '.1.3.6.1.2.1.43.5.1.1.17.1',
-                       '1.3.6.1.4.1.641.2.1.2.1.6.1',
-                       '1.3.6.1.4.1.11.2.3.9.4.2.1.1.3.3.0']
+                       '.1.3.6.1.4.1.641.2.1.2.1.6.1',
+                       '.1.3.6.1.4.1.11.2.3.9.4.2.1.1.3.3.0']
         self.model = ['.1.3.6.1.2.1.25.3.2.1.3.1',
                       '.1.3.6.1.4.1.641.2.1.2.1.2.1']
         self.counter = ['.1.3.6.1.2.1.43.10.2.1.4.1.1']
@@ -72,7 +74,8 @@ class SnmpSession(object):
             result = netsnmp.snmpget(self.var,
                                 Version=self.Version,
                                 DestHost=self.DestHost,
-                                Community=self.Community)
+                                Community=self.Community,
+                                Timeout=self.Timeout)
             self.hostrec.query = result
         except Exception, err:
             if self.Verbose:
