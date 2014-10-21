@@ -32,10 +32,7 @@ class NmapXML(object):
                 if addr.get('addrtype') == 'ipv4':
                     host = addr.get('addr')
                 elif addr.get('addrtype') == 'mac':
-                    mac = {
-                        'address': addr.get('addr'),
-                        'vendor': addr.get('vendor')
-                    }
+                    mac = addr.get('addr')
 
             # A chave do dicionário é o IP
             self.hosts[host] = dict()
@@ -129,6 +126,25 @@ class NmapXML(object):
                             open_ports=host['ports'],
                         )
                         return printer
+                    elif host.get('os'):
+                        # Nesse caso já sei que é computador. Precisa identificar o OS
+                        for os in host['os'].keys():
+                            if int(host['os'][os]['accuracy']) > accuracy:
+                                accuracy = int(host['os'][os]['accuracy'])
+                                os_final = os
+
+                        scantime = int(host.get('endtime')) - int(host.get('starttime'))
+                        computer = model.computer.Computer(
+                            ip_address=hostname,
+                            mac_address=host.get('mac'),
+                            hostname=host.get('hostname'),
+                            inclusion_date=host.get('endtime'),
+                            scantime=scantime,
+                            open_ports=host.get('ports'),
+                            so=host['os'][os_final]
+                        )
+
+                        return computer
                     else:
                         # Desiste e retorna host genérico
                         host = model.host.Host(

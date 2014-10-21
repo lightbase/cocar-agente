@@ -46,13 +46,30 @@ class Printer(Host):
         """
         Exporta todos os contadores para a impressora
         """
-        counter_list = session.query(
-            PrinterCounter
-        ).filter(
-            PrinterCounter.network_ip == self.network_ip
-        ).all()
+        #query = session.query(
+        #    PrinterCounter
+        #).filter(
+        #    PrinterCounter.__table__.c.network_ip == self.network_ip
+        #)
 
-        for counter in counter_list:
+        stm = """SELECT printer_counter.network_ip as ip_address,
+	host.mac_address,
+	host.inclusion_date,
+	host.scantime,
+	printer.model,
+	printer.serial,
+	printer.description,
+	printer_counter.counter,
+	printer_counter.counter_time
+FROM host
+JOIN printer ON host.network_ip = printer.network_ip
+JOIN printer_counter ON printer.network_ip = printer_counter.network_ip
+WHERE printer_counter.network_ip = '%s'""" % self.network_ip
+
+        counter_list = session.execute(stm, mapper=PrinterCounter).fetchall()
+
+        for elm in counter_list:
+            counter = PrinterCounter(**elm)
             print(counter)
             result = counter.export_counter(server_url, session)
             if result:
@@ -61,6 +78,7 @@ class Printer(Host):
                 log.error("Erro na remocao do contador %s para a impressora %s", counter.counter, self.network_ip)
                 return False
 
+        log.info("EXPORT DA IMPRESSORA %s FINALIZADO!!! %s CONTADORES EXPORTADOS!!!", self.network_ip, len(counter_list))
         return True
 
 
@@ -157,7 +175,7 @@ class PrinterCounter(Printer):
             return False
 
         if response.status_code == 200:
-            log.info("Contador para a impressora %s com contador %s"
+            log.info("Contador para a impressora %s com contador %s "
                      "exportado com sucesso", self.network_ip, self.counter)
             # Remove o contador
             session.execute(

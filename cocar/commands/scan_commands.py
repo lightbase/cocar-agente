@@ -16,10 +16,11 @@ from ..model.printer import Printer, PrinterCounter
 from ..model.host import Host
 from ..model.computer import Computer
 from ..csv_utils import NetworkCSV
-from ..session import NmapSession, SnmpSession
+from ..session import NmapSession, SnmpSession, ArpSession
 from multiprocessing import Process, Queue
 from ..xml_utils import NmapXML
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import and_
 
 log = logging.getLogger()
 
@@ -73,6 +74,12 @@ class ScanCommands(command.Command):
                       action='store',
                       dest='networks',
                       help='Arquivo individual de rede para ser carregado'
+    )
+
+    parser.add_option('-a', '--iface',
+                      action='store',
+                      dest='iface',
+                      help='Interface de rede para utilizar no Arping'
     )
 
     def __init__(self, name):
@@ -133,6 +140,15 @@ class ScanCommands(command.Command):
             return
         if cmd == 'import_printers':
             self.import_printers()
+            return
+        if cmd == 'get_mac':
+            self.get_mac()
+            return
+        if cmd == 'scan_mac':
+            self.scan_mac()
+            return
+        if cmd == 'scan_mac_all':
+            self.scan_mac()
             return
         else:
             log.error('Command "%s" not recognized' % (cmd,))
@@ -286,6 +302,7 @@ class ScanCommands(command.Command):
         while True:
             log.info("Iniciando scan de redes...")
             self.scan_networks()
+
             log.info("Scan de redes finalizado. Iniciando procedimento de "
                      "identificação de ativos de rede, computadores e impressoras")
             self.load_network_files()
@@ -305,17 +322,31 @@ class ScanCommands(command.Command):
             log.info("EXPORT DE IMPRESSORAS FINALIZADO!!! Reiniciando as coletas")
             #time.sleep(600)
 
+    def scan_mac_all(self):
+        """
+        Fica varrendo a rede tentando arrumar os MAC's
+        """
+        print("*** Aperente CTRL+C para encerrar a execução ***")
+
+        while True:
+            self.scan_mac()
+            log.info("SCAN DE MAC FINALIZADO!!!")
+
     def export_printers(self):
         """
         Exporta todos os contadores para o Cocar
         """
         session = self.cocar.Session
-        results = session.query(Printer).all()
+        results = session.query(Printer).join(
+            PrinterCounter.__table__,
+            PrinterCounter.network_ip == Printer.network_ip
+        ).all()
         for printer in results:
             log.info("Exportando impressora %s", printer.network_ip)
             printer.export_printer(server_url=self.cocar.config.get('cocar', 'server_url'), session=session)
 
         session.close()
+        log.info("EXPORT DAS IMPRESSORAS FINALIZADO!!! %s IMPRESSORAS EXPORTADAS!!!", len(results))
 
     def get_printer_attribute(self):
         """
@@ -457,6 +488,30 @@ class ScanCommands(command.Command):
             session = self.cocar.Session
             for hostname in nmap_xml.hosts.keys():
                 host = nmap_xml.identify_host(hostname, timeout=self.options.timeout)
+                # Antes de tudo verifica se ele já está na tabela de contadores
+                counter = session.query(
+                    PrinterCounter.__table__
+                ).outerjoin(
+                    Printer.__table__,
+                    PrinterCounter.network_ip == Printer.network_ip
+                ).filter(
+                    and_(
+                        PrinterCounter.network_ip == hostname,
+                        Printer.network_ip.is_(None)
+                    )
+                ).first()
+
+                if counter is not None:
+                    # Agora insere a impressora
+                    log.info("Inserindo impressora com o IP %s", hostname)
+                    session.execute(
+                        Printer.__table__.insert().values(
+                            network_ip=host.network_ip
+                        )
+                    )
+                    session.flush()
+                    continue
+
                 if isinstance(host, Printer):
                     # Vê se a impressora já está na base
                     results = session.query(Printer).filter(Printer.network_ip == hostname).first()
@@ -476,8 +531,21 @@ class ScanCommands(command.Command):
                                         network_ip=hostname
                                     )
                                 )
-                                session.flush()
                                 log.info("Impressora %s adicionada novamente com sucesso", hostname)
+
+                                # Agora atualiza informações do host
+                                if host.mac_address is not None:
+                                    session.execute(
+                                        Host.__table__.update().values(
+                                            mac_address=host.mac_address,
+                                            name=host.name,
+                                            ports=host.ports
+                                        ).where(
+                                            Host.network_ip == hostname
+                                        )
+                                    )
+                                    session.flush()
+                                    log.info("Informações do host %s atualizadas com sucesso", hostname)
                             else:
                                 log.error("ERRO!!! Host não encontrado com o IP!!! %s", hostname)
                     else:
@@ -492,8 +560,34 @@ class ScanCommands(command.Command):
                             session.flush()
                         except IntegrityError, e:
                             log.error("Erro adicionando computador com o IP %s. IP Repetido\n%s", hostname, e.message)
+                            # Agora atualiza informações do host
+                            if host.mac_address is not None:
+                                session.execute(
+                                    Host.__table__.update().values(
+                                        mac_address=host.mac_address,
+                                        name=host.name,
+                                        ports=host.ports
+                                    ).where(
+                                        Host.network_ip == hostname
+                                    )
+                                )
+                                session.flush()
+                                log.info("Informações do host %s atualizadas com sucesso", hostname)
                     else:
                         log.info("Computador com o IP %s já cadastrado", hostname)
+                        # Agora atualiza informações do host
+                        if host.mac_address is not None:
+                            session.execute(
+                                Host.__table__.update().values(
+                                    mac_address=host.mac_address,
+                                    name=host.name,
+                                    ports=host.ports
+                                ).where(
+                                    Host.network_ip == hostname
+                                )
+                            )
+                            session.flush()
+                            log.info("Informações do host %s atualizadas com sucesso", hostname)
                 else:
                     # Insere host genérico
                     results = session.query(Host).filter(Host.network_ip == hostname).first()
@@ -504,11 +598,41 @@ class ScanCommands(command.Command):
                             session.flush()
                         except IntegrityError, e:
                             log.error("Erro adicionando host genérico com o IP %s. IP Repetido\n%s", hostname, e.message)
+
+                            # Agora atualiza informações do host
+                            if host.mac_address is not None:
+                                session.execute(
+                                    Host.__table__.update().values(
+                                        mac_address=host.mac_address,
+                                        name=host.name,
+                                        ports=host.ports
+                                    ).where(
+                                        Host.network_ip == hostname
+                                    )
+                                )
+                                session.flush()
+                                log.info("Informações do host %s atualizadas com sucesso", hostname)
                     else:
                         log.info("Host genérico com o IP %s já cadastrado", hostname)
 
+                        # Agora atualiza informações do host
+                        if host.mac_address is not None:
+                            session.execute(
+                                Host.__table__.update().values(
+                                    mac_address=host.mac_address,
+                                    name=host.name,
+                                    ports=host.ports
+                                ).where(
+                                    Host.network_ip == hostname
+                                )
+                            )
+                            session.flush()
+                            log.info("Informações do host %s atualizadas com sucesso", hostname)
+
                 #session.flush()
             session.close()
+
+            log.info("CARGA DO ARQUIVO DE REDE %s FINALIZADA!!!", network_file)
 
     def import_printers(self):
         """
@@ -535,6 +659,86 @@ class ScanCommands(command.Command):
 
         session.close()
 
+    def get_mac(self):
+        """
+        Atualiza MAC Address para o host selecionado
+        :return:
+        """
+        if type(self.options.hosts) != list:
+            self.options.hosts = [self.options.hosts]
+
+        session = self.cocar.Session
+        for host in self.options.hosts:
+            arp = ArpSession(
+                host=host,
+                iface=self.options.iface,
+                timeout=self.options.timeout
+            )
+
+            result = arp.scan()
+
+            if result is not None:
+                log.debug("Atualizando MAC = %s para  host = %s", result, host)
+                session.execute(
+                    Host.__table__.update().values(
+                        mac_address=result
+                    ).where(
+                        Host.network_ip == host
+                    )
+                )
+                session.flush()
+
+        session.close()
+
+    def scan_mac(self):
+        """
+        Scan all hosts to update macs
+        """
+        processes = int(self.cocar.config.get('cocar', 'processes'))
+        # Create queues
+        task_queue = Queue()
+        done_queue = Queue()
+
+        session = self.cocar.Session
+        results = session.query(Host).all()
+        for host in results:
+            arp = ArpSession(
+                host=host.network_ip,
+                iface=self.options.iface,
+                timeout=self.options.timeout
+            )
+            task_queue.put(arp)
+
+        #Start worker processes
+        for i in range(processes):
+            Process(target=worker_mac, args=(task_queue, done_queue)).start()
+
+        # Get and print results
+        print 'Unordered results:'
+        for i in range(len(results)):
+            host_list = done_queue.get()
+            log.debug(host_list)
+            if host_list[1] is None:
+                log.error("Nao foi possivel encontrar o mac do host %s", host_list[0])
+                continue
+            try:
+                log.debug("Atualizando MAC = %s para  host = %s", host_list[1], host_list[0])
+                session.execute(
+                    Host.__table__.update().values(
+                        mac_address=host_list[1]
+                    ).where(
+                        Host.network_ip == host_list[0]
+                    )
+                )
+                session.flush()
+            except AttributeError, e:
+                log.error("Erro na atualização do MAC para host %s\n%s", host_list[0], e.message)
+                continue
+
+        # Tell child processes to stop
+        for i in range(processes):
+            task_queue.put('STOP')
+
 
 def make_query(host):
     """This does the actual snmp query
@@ -558,6 +762,17 @@ def make_query_printer(host):
     return host.printer_dict()
 
 
+def make_query_mac(host):
+    """This does the actual snmp query
+
+    This is a bit fancy as it accepts both instances
+    of SnmpSession and host/ip addresses.  This
+    allows a user to customize mass queries with
+    subsets of different hostnames and community strings
+    """
+    return host.scan_list()
+
+
 # Function run by worker processes
 def worker(inp, output):
     for func in iter(inp.get, 'STOP'):
@@ -569,4 +784,11 @@ def worker(inp, output):
 def worker_printer(inp, output):
     for func in iter(inp.get, 'STOP'):
         result = make_query_printer(func)
+        output.put(result)
+
+
+# Function run by worker processes
+def worker_mac(inp, output):
+    for func in iter(inp.get, 'STOP'):
+        result = make_query_mac(func)
         output.put(result)

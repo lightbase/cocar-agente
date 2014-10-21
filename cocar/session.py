@@ -7,6 +7,7 @@ import netsnmp
 import subprocess
 import logging
 from . import Cocar
+import re
 
 log = logging.getLogger()
 
@@ -248,3 +249,79 @@ class NmapSession(object):
             return False
 
         return True
+
+
+class ArpSession(object):
+    """
+    Classe para buscar informações de MAC do ativo
+    """
+    def __init__(self,
+                 host,
+                 iface='eth0',
+                 timeout='10'):
+        """
+        :param host: Endereço IP do host a ser escaneado
+        :param mac: MAC address do host
+        :param timeout: Timeout esperando pelo reply da interface
+        """
+        self.host = host
+        self.iface = iface
+        self.timeout = timeout
+
+    def scan(self):
+        """
+
+        :return: Somente MAc
+        """
+        log.debug("Iniciando scan para o host %s", self.host)
+        try:
+            scanv = subprocess.Popen(["sudo",
+                                      "arping",
+                                      "-I",
+                                      self.iface,
+                                      "-c",
+                                      '1',
+                                      "-w",
+                                      self.timeout,
+                                      self.host],
+                                     stdout=subprocess.PIPE,
+                                     stderr=subprocess.PIPE).communicate()[0]
+
+            match = re.search("(\[)(.*)(\])", scanv)
+
+            if match:
+                return match.group(2)
+
+            return match
+        except OSError:
+            log.error("Install arping: sudo apt-get install arping")
+            return None
+
+    def scan_list(self):
+        """
+
+        :return: List com host e MAC
+        """
+        log.debug("Iniciando scan para o host %s", self.host)
+        try:
+            scanv = subprocess.Popen(["sudo",
+                                      "arping",
+                                      "-I",
+                                      self.iface,
+                                      "-c",
+                                      '1',
+                                      "-w",
+                                      self.timeout,
+                                      self.host],
+                                     stdout=subprocess.PIPE,
+                                     stderr=subprocess.PIPE).communicate()[0]
+
+            match = re.search("(\[)(.*)(\])", scanv)
+
+            if match:
+                return [self.host, match.group(2)]
+
+            return [self.host, match]
+        except OSError:
+            log.error("Install arping: sudo apt-get install arping")
+            return None
