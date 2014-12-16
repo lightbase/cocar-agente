@@ -2,9 +2,10 @@
 # -*- coding: utf-8 -*-
 __author__ = 'eduardo'
 from netaddr import IPAddress
-from sqlalchemy.schema import Column
+from sqlalchemy.schema import Column, ForeignKeyConstraint, ForeignKey
 from sqlalchemy.types import String, Integer
 from . import Base
+from .network import Network
 
 
 class Host(Base):
@@ -18,6 +19,7 @@ class Host(Base):
     inclusion_date = Column(String(20))
     scantime = Column(Integer)
     ports = Column(String)
+    ip_network = Column(String(16), ForeignKey('network.ip_network'), nullable=True)
 
     def __init__(self,
                  ip_address,
@@ -25,7 +27,8 @@ class Host(Base):
                  hostname=None,
                  inclusion_date=None,
                  scantime=None,
-                 open_ports=None):
+                 open_ports=None,
+                 ip_network=None):
         """
         Método construtor do ativo de rede
 
@@ -36,6 +39,7 @@ class Host(Base):
         :param inclusion_date: Data de coleta
         :param scantime: Tempo levado na execução
         :param open_ports: Portas abertas
+        :param ip_network: Rede cadastrada
         :return:
         """
         self.ip_address = IPAddress(ip_address)
@@ -44,6 +48,7 @@ class Host(Base):
         self.inclusion_date = inclusion_date
         self.scantime = scantime
         self.open_ports = open_ports
+        self.ip_network = ip_network
 
         # Parâmetros do SQLAlchemy
         self.network_ip = str(self.ip_address)
@@ -63,11 +68,12 @@ class Host(Base):
         """
         Metodo que passa a lista de parametros da classe
         """
-        return "<Host('%s, %s, %s, %s, %s, %s')>" % (
+        return "<Host('%s, %s, %s, %s, %s, %s, %s')>" % (
             self.network_ip,
             self.mac_address,
             self.name,
             self.inclusion_date,
             self.scantime,
-            self.ports
+            self.ports,
+            self.ip_network
         )

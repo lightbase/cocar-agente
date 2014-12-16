@@ -52,9 +52,16 @@ class NmapXML(object):
                     service = port_xml.find('service').get('name')
                 else:
                     service = None
+
+                # State pode ser vazio por alguma razão desconhecida
+                if port_xml.find('state') is None:
+                    state = None
+                else:
+                    state = port_xml.find('state').get('state')
+
                 self.hosts[host]['ports'][port_xml.get('portid')] = {
                     'protocol': port_xml.get('protocol'),
-                    'state': port_xml.find('state').get('state'),
+                    'state': state,
                     'service': service,
                 }
 

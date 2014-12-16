@@ -11,7 +11,8 @@ requires = [
     'PasteScript',
     'iptools',
     'requests',
-    'mock'
+    'mock',
+    'alembic'
 ]
 
 

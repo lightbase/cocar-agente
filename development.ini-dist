@@ -1,3 +1,8 @@
+[alembic]
+# path to migration scripts
+script_location = alembic
+sqlalchemy.url = sqlite:////srv/cocar-agente/cocar-data/tests/cocar-test.db
+
 [cocar]
 data_dir = /srv/cocar-agente/cocar_data
 networks_csv = /srv/cocar-agente/cocar_data/networks.csv
@@ -12,28 +17,39 @@ url = sqlite:////srv/cocar-agente/cocar-data/tests/cocar-test.db
 keys = root, cocar, sqlalchemy
 
 [handlers]
-keys = console
+keys = file, console
 
 [formatters]
 keys = generic
 
 [logger_root]
 level = DEBUG
-handlers = console
+handlers = file
 
 [logger_cocar]
 level = DEBUG
 handlers =
-qualname = lbgenerator
+qualname = cocar
 
 [logger_sqlalchemy]
 level = INFO
 handlers =
 qualname = sqlalchemy.engine
 
+[logger_alembic]
+level = INFO
+handlers =
+qualname = alembic
+
 [handler_console]
 class = StreamHandler
 args = (sys.stderr,)
+level = DEBUG
+formatter = generic
+
+[handler_file]
+class = handlers.RotatingFileHandler
+args = ('/srv/cocar-agente/cocar-agente.log', 'a', int(20*1024*1024), 10)
 level = DEBUG
 formatter = generic
 

@@ -11,6 +11,7 @@ from sqlalchemy import ForeignKey
 from sqlalchemy.schema import Column
 from sqlalchemy.types import String, Integer
 from sqlalchemy import and_, insert, update
+from .network import Network
 
 log = logging.getLogger()
 
@@ -53,18 +54,18 @@ class Printer(Host):
         #)
 
         stm = """SELECT printer_counter.network_ip as ip_address,
-	host.mac_address,
-	host.inclusion_date,
-	host.scantime,
-	printer.model,
-	printer.serial,
-	printer.description,
-	printer_counter.counter,
-	printer_counter.counter_time
-FROM host
-JOIN printer ON host.network_ip = printer.network_ip
-JOIN printer_counter ON printer.network_ip = printer_counter.network_ip
-WHERE printer_counter.network_ip = '%s'""" % self.network_ip
+                    host.mac_address,
+                    host.inclusion_date,
+                    host.scantime,
+                    printer.model,
+                    printer.serial,
+                    printer.description,
+                    printer_counter.counter,
+                    printer_counter.counter_time
+                FROM host
+                JOIN printer ON host.network_ip = printer.network_ip
+                JOIN printer_counter ON printer.network_ip = printer_counter.network_ip
+                WHERE printer_counter.network_ip = '%s'""" % self.network_ip
 
         counter_list = session.execute(stm, mapper=PrinterCounter).fetchall()
 
@@ -147,6 +148,16 @@ class PrinterCounter(Printer):
         :param session: Sessão do banco de dados
         :return: Verdadeiro ou falso dependendo do sucesso
         """
+        # Busca atributos da rede
+        network = session.query(Network.__table__).filter(
+            Network.__table__.c.ip_network == self.ip_network
+        ).first()
+
+        if network is None:
+            name = None
+        else:
+            name = network.name
+
         export_url = server_url + '/api/printer/' + self.network_ip
         counter_json = {
             'ip_address': self.network_ip,
@@ -154,7 +165,8 @@ class PrinterCounter(Printer):
             'serial': self.serial,
             'description': self.description,
             'counter': self.counter,
-            'counter_time': int(float(self.counter_time))
+            'counter_time': int(float(self.counter_time)),
+            'local': name
         }
 
         # Envia a requisição HTTP

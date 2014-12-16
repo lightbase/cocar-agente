@@ -148,7 +148,7 @@ class ScanCommands(command.Command):
             self.scan_mac()
             return
         if cmd == 'scan_mac_all':
-            self.scan_mac()
+            self.scan_mac_all()
             return
         else:
             log.error('Command "%s" not recognized' % (cmd,))
@@ -169,15 +169,36 @@ class ScanCommands(command.Command):
         """
         Load networks from CSV file
         """
-        networks_csv = NetworkCSV(csv_file=self.networks_csv)
+        #networks_csv = NetworkCSV(csv_file=self.networks_csv)
+        # First download Networks from Cocar
+        url = self.cocar.config.get('cocar', 'server_url') + '/api/networks'
+        response = requests.get(
+            url
+        )
+        networks_json = response.json()
         session = self.cocar.Session
-        for elm in networks_csv.parse_csv():
-            results = session.query(Network).filter(Network.ip_network == elm.ip_network).first()
+        for elm in networks_json['networks']:
+            network = Network(
+                network_ip=elm['ip_network'],
+                netmask=elm['netmask'],
+                name=elm['name']
+            )
+            results = session.query(Network).filter(Network.ip_network == network.ip_network).first()
             if results is None:
-                log.info("Adicionando a rede: %s", elm.network_ip)
-                session.add(elm)
+                log.info("Adicionando a rede: %s", network.ip_network)
+                session.add(network)
             else:
-                log.info("Rede já cadastrada: %s", elm.network_ip)
+                log.info("Rede já cadastrada: %s. Atualizando informações...", network.ip_network)
+                session.execute(
+                    Network.__table__.update().values(
+                        netmask=elm['netmask'],
+                        name=elm['name'],
+                        ip_network=network.ip_network
+                    ).where(
+                        Network.__table__.c.ip_network == network.ip_network
+                    )
+                )
+
         session.flush()
         session.close()
 
@@ -194,18 +215,25 @@ class ScanCommands(command.Command):
         results = session.query(Network).all()
         for network in results:
             network.network_ip = network.ip_network
+            network.network_file = self.networks_dir + "/" + str(network.network_ip.cidr).replace("/", "-") + ".xml"
             if self.options.full is None:
                 nmap_session = NmapSession(
                     network.network_ip.cidr,
-                    outfile=self.networks_dir + "/" + str(network.network_ip.cidr).replace("/", "-") + ".xml",
+                    outfile=network.network_file,
                     full=False
                 )
             else:
                 nmap_session = NmapSession(
                     network.network_ip.cidr,
-                    outfile=self.networks_dir + "/" + str(network.network_ip.cidr).replace("/", "-") + ".xml",
+                    outfile=network.network_file,
                     full=True
                 )
+
+            # Store network file name on Network object
+            network = session.merge(network)
+            session.flush()
+
+            # Add search on network
             task_queue.put(nmap_session)
 
         #Start worker processes
@@ -226,7 +254,15 @@ class ScanCommands(command.Command):
         Load printers from networks files
         :return:
         """
-        onlyfiles = [ f for f in os.listdir(self.networks_dir) if os.path.isfile(os.path.join(self.networks_dir, f)) ]
+        #onlyfiles = [ f for f in os.listdir(self.networks_dir) if os.path.isfile(os.path.join(self.networks_dir, f)) ]
+        session = self.cocar.Session
+
+        # Look for network files in DB
+        results = session.query(Network.__table__).all()
+        onlyfiles = list()
+        for network in results:
+            onlyfiles.append(network)
+
         self.options.networks = onlyfiles
         return self.load_file()
 
@@ -300,6 +336,9 @@ class ScanCommands(command.Command):
         print("*** Aperente CTRL+C para encerrar a execução ***")
 
         while True:
+            log.info("Carregando informações das subredes...")
+            self.load_networks()
+
             log.info("Iniciando scan de redes...")
             self.scan_networks()
 
@@ -462,32 +501,51 @@ class ScanCommands(command.Command):
         Load printers from networks files
         :return:
         """
+        session = self.cocar.Session
         onlyfiles = list()
         if type(self.options.networks) == list:
             for elm in self.options.networks:
                 onlyfiles.append(elm)
         else:
-            onlyfiles.append(self.options.networks)
+            network = session.query(Network.__table__).filter(
+                Network.__table__.c.ip_network == self.options.networks
+            ).first()
+            if network is not None:
+                onlyfiles.append(network)
+            else:
+                log.error("Rede não encontrada: %s", self.options.networks)
+                return
 
         for i in range(len(onlyfiles)):
-            network_file = self.networks_dir + "/" + onlyfiles[i]
+            network = onlyfiles[i]
+            network_file = network.network_file
             log.info("Processando arquivo de rede %s", network_file)
             nmap_xml = NmapXML(network_file)
             try:
                 host_dict = nmap_xml.parse_xml()
-            except AttributeError, e:
-                log.error("Erro realizando parsing do arquivo %s\n%s", network_file, e.message)
+            except AttributeError as e:
+                log.error("Erro de Atributo!!! "
+                          "Erro realizando parsing do arquivo %s\n%s", network_file, e.message)
                 continue
-            except lxml.etree.XMLSyntaxError, e:
-                log.error("Erro realizando parsing do arquivo %s\n%s", network_file, e.message)
+            except lxml.etree.XMLSyntaxError as e:
+                log.error("Erro de parsing!!!! "
+                          "Erro realizando parsing do arquivo %s\n%s", network_file, e.message)
                 continue
+            except IOError as e:
+                log.error("Arquivo não encontrado!!! "
+                          "Arquivo %s não encontrado\n%s", network_file, e.message)
 
             if not host_dict:
                 log.error("File %s not found", network_file)
                 continue
+
             session = self.cocar.Session
             for hostname in nmap_xml.hosts.keys():
                 host = nmap_xml.identify_host(hostname, timeout=self.options.timeout)
+
+                # Adiciona host na Rede
+                host.ip_network = network.ip_network
+
                 # Antes de tudo verifica se ele já está na tabela de contadores
                 counter = session.query(
                     PrinterCounter.__table__
@@ -504,6 +562,12 @@ class ScanCommands(command.Command):
                 if counter is not None:
                     # Agora insere a impressora
                     log.info("Inserindo impressora com o IP %s", hostname)
+                    Host.__table__.update().values(
+                        ip_network=network.ip_network
+                    ).where(
+                        Host.__table__.c.network_ip == host.network_ip
+                    )
+
                     session.execute(
                         Printer.__table__.insert().values(
                             network_ip=host.network_ip
@@ -539,7 +603,8 @@ class ScanCommands(command.Command):
                                         Host.__table__.update().values(
                                             mac_address=host.mac_address,
                                             name=host.name,
-                                            ports=host.ports
+                                            ports=host.ports,
+                                            ip_network=host.ip_network
                                         ).where(
                                             Host.network_ip == hostname
                                         )
@@ -566,7 +631,8 @@ class ScanCommands(command.Command):
                                     Host.__table__.update().values(
                                         mac_address=host.mac_address,
                                         name=host.name,
-                                        ports=host.ports
+                                        ports=host.ports,
+                                        ip_network=host.ip_network
                                     ).where(
                                         Host.network_ip == hostname
                                     )
@@ -581,7 +647,8 @@ class ScanCommands(command.Command):
                                 Host.__table__.update().values(
                                     mac_address=host.mac_address,
                                     name=host.name,
-                                    ports=host.ports
+                                    ports=host.ports,
+                                    ip_network=host.ip_network
                                 ).where(
                                     Host.network_ip == hostname
                                 )
@@ -605,7 +672,8 @@ class ScanCommands(command.Command):
                                     Host.__table__.update().values(
                                         mac_address=host.mac_address,
                                         name=host.name,
-                                        ports=host.ports
+                                        ports=host.ports,
+                                        ip_network=host.ip_network
                                     ).where(
                                         Host.network_ip == hostname
                                     )
@@ -621,7 +689,8 @@ class ScanCommands(command.Command):
                                 Host.__table__.update().values(
                                     mac_address=host.mac_address,
                                     name=host.name,
-                                    ports=host.ports
+                                    ports=host.ports,
+                                    ip_network=host.ip_network
                                 ).where(
                                     Host.network_ip == hostname
                                 )
@@ -654,7 +723,7 @@ class ScanCommands(command.Command):
             try:
                 session.add(printer)
                 session.flush()
-            except IntegrityError, e:
+            except IntegrityError as e:
                 log.info("Impressora %s ja cadastrada", elm['network_ip'])
 
         session.close()
