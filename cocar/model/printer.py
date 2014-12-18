@@ -23,7 +23,7 @@ class Printer(Host):
     __tablename__ = 'printer'
     network_ip = Column(String(16), ForeignKey("host.network_ip"), nullable=False, primary_key=True)
     model = Column(String)
-    serial = Column(String(50))
+    serial = Column(String(50), primary_key=True, nullable=True)
     description = Column(String)
 
     def __init__(self,
@@ -53,7 +53,7 @@ class Printer(Host):
         #    PrinterCounter.__table__.c.network_ip == self.network_ip
         #)
 
-        stm = """SELECT printer_counter.network_ip as ip_address,
+        stm = """SELECT host.network_ip as ip_address,
                     host.mac_address,
                     host.inclusion_date,
                     host.scantime,
@@ -88,7 +88,7 @@ class PrinterCounter(Printer):
     Classe que armazena o contador das impressoras
     """
     __tablename__ = 'printer_counter'
-    network_ip = Column(String(16), ForeignKey("printer.network_ip"), nullable=False)
+    serial = Column(String(16), ForeignKey("printer.serial"), nullable=False, primary_key=True)
     counter = Column(Integer, nullable=False, primary_key=True)
     counter_time = Column(String(50), nullable=False, primary_key=True)
 
@@ -111,6 +111,7 @@ class PrinterCounter(Printer):
         retorno = False
         results = session.query(self.__table__).filter(
             and_(
+                self.__table__.c.serial == self.serial,
                 self.__table__.c.counter == self.counter,
                 self.__table__.c.counter_time == self.counter_time
             )
@@ -120,7 +121,7 @@ class PrinterCounter(Printer):
             log.debug("Inserindo contador para impressora %s serial %s", self.network_ip, self.serial)
             session.execute(
                 self.__table__.insert().values(
-                    network_ip=self.network_ip,
+                    serial=self.serial,
                     counter=self.counter,
                     counter_time=self.counter_time
                 )
@@ -129,11 +130,11 @@ class PrinterCounter(Printer):
 
         session.execute(
             Printer.__table__.update().values(
+                network_ip=self.network_ip,
                 model=self.model,
-                description=self.description,
-                serial=self.serial
+                description=self.description
             ).where(
-                Printer.__table__.c.network_ip == self.network_ip
+                Printer.__table__.c.serial == self.serial
             )
         )
 
@@ -155,8 +156,10 @@ class PrinterCounter(Printer):
 
         if network is None:
             name = None
+            netmask = None
         else:
             name = network.name
+            netmask = network.netmask
 
         export_url = server_url + '/api/printer/' + self.network_ip
         counter_json = {
@@ -166,7 +169,8 @@ class PrinterCounter(Printer):
             'description': self.description,
             'counter': self.counter,
             'counter_time': int(float(self.counter_time)),
-            'local': name
+            'local': name,
+            'netmask': netmask
         }
 
         # Envia a requisição HTTP
@@ -182,18 +186,18 @@ class PrinterCounter(Printer):
             response.raise_for_status()
         except HTTPError, e:
             # Something got wrong, raise error
-            log.error("Erro na insercao do contador para a impressora %s\n%s", self.network_ip, response.text)
+            log.error("Erro na insercao do contador para a impressora %s\n%s", self.serial, response.text)
             log.error(e.message)
             return False
 
         if response.status_code == 200:
             log.info("Contador para a impressora %s com contador %s "
-                     "exportado com sucesso", self.network_ip, self.counter)
+                     "exportado com sucesso", self.serial, self.counter)
             # Remove o contador
             session.execute(
                 PrinterCounter.__table__.delete().where(
                     and_(
-                        PrinterCounter.__table__.c.network_ip == self.network_ip,
+                        PrinterCounter.__table__.c.serial == self.serial,
                         PrinterCounter.__table__.c.counter == self.counter,
                         PrinterCounter.__table__.c.counter_time == self.counter_time,
                     )
@@ -202,5 +206,5 @@ class PrinterCounter(Printer):
             session.flush()
             return True
         else:
-            log.error("Erro na remoção da impressora %s. Status code = %s", self.network_ip, response.status)
+            log.error("Erro na remoção da impressora %s. Status code = %s", self.serial, response.status)
             return False

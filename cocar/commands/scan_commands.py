@@ -21,6 +21,7 @@ from multiprocessing import Process, Queue
 from ..xml_utils import NmapXML
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import and_
+from netaddr.core import AddrFormatError
 
 log = logging.getLogger()
 
@@ -178,17 +179,22 @@ class ScanCommands(command.Command):
         networks_json = response.json()
         session = self.cocar.Session
         for elm in networks_json['networks']:
-            network = Network(
-                network_ip=elm['ip_network'],
-                netmask=elm['netmask'],
-                name=elm['name']
-            )
+            try:
+                network = Network(
+                    network_ip=elm['ip_network'],
+                    netmask=elm['netmask'],
+                    name=elm['name']
+                )
+            except AddrFormatError as e:
+                log.error("Endereco de rede invalido!!!\n%s\n%s", elm, e.message)
+                continue
+
             results = session.query(Network).filter(Network.ip_network == network.ip_network).first()
             if results is None:
                 log.info("Adicionando a rede: %s", network.ip_network)
                 session.add(network)
             else:
-                log.info("Rede já cadastrada: %s. Atualizando informações...", network.ip_network)
+                log.info("Rede já cadastrada: %s. Atualizando informacoes...", network.ip_network)
                 session.execute(
                     Network.__table__.update().values(
                         netmask=elm['netmask'],
@@ -378,7 +384,7 @@ class ScanCommands(command.Command):
         session = self.cocar.Session
         results = session.query(Printer).join(
             PrinterCounter.__table__,
-            PrinterCounter.network_ip == Printer.network_ip
+            PrinterCounter.serial == Printer.serial
         ).all()
         for printer in results:
             log.info("Exportando impressora %s", printer.network_ip)
@@ -389,7 +395,7 @@ class ScanCommands(command.Command):
 
     def get_printer_attribute(self):
         """
-        Retorna e grava um atributo n   o valor da impressora
+        Retorna e grava um atributo no valor da impressora
         """
         session = self.cocar.Session
         if self.options.hosts is None:
@@ -441,7 +447,7 @@ class ScanCommands(command.Command):
                     elif self.options.query[i] == 'status':
                         status = snmp_session.printer_status()
                         printer_dict['status'] = status
-                log.debug(printer_dict)
+                #log.debug(printer_dict)
                 try:
                     log.debug("Atualizando informacoes da impressora %s", printer.network_ip)
                     log.debug(printer_dict)
@@ -450,6 +456,7 @@ class ScanCommands(command.Command):
 
                         printer_counter = PrinterCounter(
                             ip_address=printer.network_ip,
+                            serial=printer_dict['serial'],
                             counter=printer_dict['counter'],
                             counter_time=time.time()
                         )
@@ -458,10 +465,6 @@ class ScanCommands(command.Command):
                             printer_counter.model = printer_dict['model']
                             printer.model = printer_dict['model']
 
-                        if printer_dict.get('serial') is not None:
-                            printer_counter.serial = printer_dict['serial']
-                            printer.serial = printer_dict['serial']
-
                         if printer_dict.get('description') is not None:
                             printer_counter.description = printer_dict['description']
                             printer.description = printer_dict['description']
@@ -469,29 +472,33 @@ class ScanCommands(command.Command):
                         # Para esse caso atualiza o contador
                         printer_counter.update_counter(session)
                     else:
+                        # Não posso seguir sem serial
+                        printer.serial = printer_dict['serial']
+
                         # Nesse caso só atualizo a impressora
                         if printer_dict.get('model') is not None:
                             printer.model = printer_dict['model']
-
-                        if printer_dict.get('serial') is not None:
-                            printer.serial = printer_dict['serial']
 
                         if printer_dict.get('description') is not None:
                             printer.description = printer_dict['description']
 
                     session.execute(
                         Printer.__table__.update().values(
+                            network_ip=printer.network_ip,
                             model=printer.model,
-                            description=printer.description,
-                            serial=printer.serial
+                            description=printer.description
                         ).where(
-                            Printer.__table__.c.network_ip == printer.network_ip
+                            Printer.__table__.c.serial == printer.serial
                         )
                     )
                     session.flush()
 
-                except IntegrityError, e:
+                except IntegrityError as e:
                     log.error("Erro na atualizacao das informacoes para a impressora %s\n%s", printer.network_ip, e.message)
+                    continue
+
+                except KeyError as e:
+                    log.error("Serial não localizado para a impressora %s\n%s", printer.network_ip, e.message)
                     continue
 
         session.close()
@@ -532,8 +539,8 @@ class ScanCommands(command.Command):
                           "Erro realizando parsing do arquivo %s\n%s", network_file, e.message)
                 continue
             except IOError as e:
-                log.error("Arquivo não encontrado!!! "
-                          "Arquivo %s não encontrado\n%s", network_file, e.message)
+                log.error("Arquivo nao encontrado!!! "
+                          "Arquivo %s nao encontrado\n%s", network_file, e.message)
 
             if not host_dict:
                 log.error("File %s not found", network_file)
@@ -551,7 +558,7 @@ class ScanCommands(command.Command):
                     PrinterCounter.__table__
                 ).outerjoin(
                     Printer.__table__,
-                    PrinterCounter.network_ip == Printer.network_ip
+                    PrinterCounter.serial == Printer.serial
                 ).filter(
                     and_(
                         PrinterCounter.network_ip == hostname,
@@ -582,7 +589,7 @@ class ScanCommands(command.Command):
                     if results is None:
                         log.info("Inserindo impressora com o IP %s", hostname)
                         try:
-                            session.add(host)
+                            host = session.merge(host)
                             session.flush()
                         except IntegrityError, e:
                             log.error("Erro adicionando impressora com o IP %s. IP Repetido\n%s", hostname, e.message)

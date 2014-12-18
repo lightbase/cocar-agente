@@ -14,7 +14,7 @@ depends_on = None
 
 from alembic import op
 import sqlalchemy as sa
-from cocar.model import host, Base
+from cocar.model import host
 
 
 def upgrade():
@@ -93,7 +93,13 @@ def upgrade():
 
     # Finally add all registers back
     result = connection.execute(
-        "SELECT * FROM host_bak"
+        """SELECT network_ip,
+                  mac_address,
+                  name,
+                  inclusion_date,
+                  scantime,
+                  ports
+           FROM host_bak"""
     )
 
     saida = list()
