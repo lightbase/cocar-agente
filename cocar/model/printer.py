@@ -161,7 +161,7 @@ class PrinterCounter(Printer):
             name = network.name
             netmask = network.netmask
 
-        export_url = server_url + '/api/printer/' + self.network_ip
+        export_url = server_url + '/api/printer/' + self.serial
         counter_json = {
             'ip_address': self.network_ip,
             'model': self.model,
