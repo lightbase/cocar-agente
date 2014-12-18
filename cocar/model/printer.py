@@ -64,8 +64,8 @@ class Printer(Host):
                     printer_counter.counter_time
                 FROM host
                 JOIN printer ON host.network_ip = printer.network_ip
-                JOIN printer_counter ON printer.network_ip = printer_counter.network_ip
-                WHERE printer_counter.network_ip = '%s'""" % self.network_ip
+                JOIN printer_counter ON printer.serial = printer_counter.serial
+                WHERE printer_counter.serial = '%s'""" % self.serial
 
         counter_list = session.execute(stm, mapper=PrinterCounter).fetchall()
 
@@ -74,12 +74,12 @@ class Printer(Host):
             print(counter)
             result = counter.export_counter(server_url, session)
             if result:
-                log.info("Contador %s para a impressora %s exportado com sucesso")
+                log.info("Contador %s para a impressora %s exportado com sucesso", counter.counter, self.serial)
             else:
-                log.error("Erro na remocao do contador %s para a impressora %s", counter.counter, self.network_ip)
+                log.error("Erro na remocao do contador %s para a impressora %s", counter.counter, self.serial)
                 return False
 
-        log.info("EXPORT DA IMPRESSORA %s FINALIZADO!!! %s CONTADORES EXPORTADOS!!!", self.network_ip, len(counter_list))
+        log.info("EXPORT DA IMPRESSORA %s FINALIZADO!!! %s CONTADORES EXPORTADOS!!!", self.serial, len(counter_list))
         return True
 
 

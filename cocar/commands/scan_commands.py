@@ -316,6 +316,10 @@ class ScanCommands(command.Command):
                 log.error("Nao foi possivel ler o contador da impressora %s", printer_dict['network_ip'])
                 continue
 
+            if printer_dict['serial'] is None:
+                log.error("Serial vazio para a impressora %s. Desconsiderar...", printer_dict['network_ip'])
+                continue
+
             try:
                 log.debug("Gravando contador = %s para a impressora = %s serial = %s", printer_dict['counter'], printer_dict['network_ip'], printer_dict['serial'])
                 printer = PrinterCounter(
@@ -387,7 +391,7 @@ class ScanCommands(command.Command):
             PrinterCounter.serial == Printer.serial
         ).all()
         for printer in results:
-            log.info("Exportando impressora %s", printer.network_ip)
+            log.info("Exportando impressora %s", printer.serial)
             printer.export_printer(server_url=self.cocar.config.get('cocar', 'server_url'), session=session)
 
         session.close()
@@ -621,7 +625,9 @@ class ScanCommands(command.Command):
                             else:
                                 log.error("ERRO!!! Host não encontrado com o IP!!! %s", hostname)
                     else:
-                        log.info("Impressora com o IP %s já cadastrada", hostname)
+                        log.info("Impressora com o IP %s já cadastrada. Atualizando informações da subrede", hostname)
+                        host = session.merge(host)
+                        session.flush()
                 elif isinstance(host, Computer):
                     # Vê se o host já está na base
                     results = session.query(Computer).filter(Computer.network_ip == hostname).first()
