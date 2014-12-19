@@ -88,7 +88,7 @@ class PrinterCounter(Printer):
     Classe que armazena o contador das impressoras
     """
     __tablename__ = 'printer_counter'
-    serial = Column(String(16), ForeignKey("printer.serial"), nullable=False, primary_key=True)
+    serial = Column(UnicodeText(16), ForeignKey("printer.serial"), nullable=False, primary_key=True)
     counter = Column(Integer, nullable=False, primary_key=True)
     counter_time = Column(String(50), nullable=False, primary_key=True)
 
