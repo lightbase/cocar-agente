@@ -19,7 +19,7 @@ from ..csv_utils import NetworkCSV
 from ..session import NmapSession, SnmpSession, ArpSession
 from multiprocessing import Process, Queue
 from ..xml_utils import NmapXML
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, ProgrammingError
 from sqlalchemy import and_
 from netaddr.core import AddrFormatError
 from requests.exceptions import HTTPError
@@ -328,7 +328,8 @@ class ScanCommands(command.Command):
                 continue
 
             try:
-                log.debug("Gravando contador = %s para a impressora = %s serial = %s", printer_dict['counter'], printer_dict['network_ip'], printer_dict['serial'])
+                log.debug("Gravando contador = %s para a impressora = %s serial = %s",
+                          printer_dict['counter'], printer_dict['network_ip'], printer_dict['serial'])
 
                 results = session.query(Printer.__table__).filter(
                     Printer.__table__.c.serial == printer_dict['serial']
@@ -362,8 +363,16 @@ class ScanCommands(command.Command):
                     counter_time=time.time()
                 )
                 printer.update_counter(session)
-            except AttributeError, e:
+            except AttributeError as e:
                 log.error("Erro na insercao do contador para a impressora %s\n%s", printer_dict['network_ip'], e.message)
+                continue
+
+            except UnicodeDecodeError as e:
+                log.error("Caracteres invalidos\n%s", e.message)
+                continue
+
+            except ProgrammingError as e:
+                log.error("Serial com caracteres invalidos\n%s", e.message)
                 continue
 
         # Tell child processes to stop
