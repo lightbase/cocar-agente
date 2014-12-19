@@ -678,16 +678,27 @@ class ScanCommands(command.Command):
                                 log.error("ERRO!!! Host não encontrado com o IP!!! %s", hostname)
                     else:
                         log.info("Impressora com o IP %s já cadastrada. Atualizando informações da subrede", hostname)
-                        session.execute(
-                            Host.__table__.update().values(
-                                mac_address=host.mac_address,
-                                name=host.name,
-                                ports=host.ports,
-                                ip_network=host.ip_network
-                            ).where(
-                                Host.network_ip == hostname
+                        if host.mac_address is not None:
+                            session.execute(
+                                Host.__table__.update().values(
+                                    mac_address=host.mac_address,
+                                    name=host.name,
+                                    ports=host.ports,
+                                    ip_network=host.ip_network
+                                ).where(
+                                    Host.network_ip == hostname
+                                )
                             )
-                        )
+                        else:
+                            session.execute(
+                                Host.__table__.update().values(
+                                    name=host.name,
+                                    ports=host.ports,
+                                    ip_network=host.ip_network
+                                ).where(
+                                    Host.network_ip == hostname
+                                )
+                            )
                         #results.ip_network = host.ip_network
                         #results.network_ip = host.network_ip
                         #host = session.merge(results)
