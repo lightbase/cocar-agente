@@ -9,7 +9,7 @@ from sqlalchemy.orm import aliased
 from .host import Host
 from sqlalchemy import ForeignKey
 from sqlalchemy.schema import Column
-from sqlalchemy.types import String, Integer
+from sqlalchemy.types import String, Integer, UnicodeText
 from sqlalchemy import and_, insert, update
 from .network import Network
 
@@ -22,9 +22,9 @@ class Printer(Host):
     """
     __tablename__ = 'printer'
     network_ip = Column(String(16), ForeignKey("host.network_ip"), nullable=False, primary_key=True)
-    model = Column(String)
-    serial = Column(String(50), primary_key=True, nullable=True)
-    description = Column(String)
+    model = Column(UnicodeText)
+    serial = Column(UnicodeText(50), primary_key=True, nullable=True)
+    description = Column(UnicodeText)
 
     def __init__(self,
                  model=None,
