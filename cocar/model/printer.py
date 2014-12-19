@@ -184,7 +184,7 @@ class PrinterCounter(Printer):
         try:
             # Check if request has gone wrong
             response.raise_for_status()
-        except HTTPError, e:
+        except HTTPError as e:
             # Something got wrong, raise error
             log.error("Erro na insercao do contador para a impressora %s\n%s", self.serial, response.text)
             log.error(e.message)

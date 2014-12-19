@@ -22,6 +22,7 @@ from ..xml_utils import NmapXML
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import and_
 from netaddr.core import AddrFormatError
+from requests.exceptions import HTTPError
 
 log = logging.getLogger()
 
@@ -170,14 +171,29 @@ class ScanCommands(command.Command):
         """
         Load networks from CSV file
         """
-        #networks_csv = NetworkCSV(csv_file=self.networks_csv)
+        # networks_csv = NetworkCSV(csv_file=self.networks_csv)
         # First download Networks from Cocar
         url = self.cocar.config.get('cocar', 'server_url') + '/api/networks'
         response = requests.get(
             url
         )
+
+        try:
+            # Check if request has gone wrong
+            response.raise_for_status()
+        except HTTPError as e:
+            log.error("Erro na carga das subredes\n%s", e.message)
+            return
+
         networks_json = response.json()
         session = self.cocar.Session
+
+        # Primeiro apaga todas as subredes
+        session.execute(
+            Network.__table__.delete()
+        )
+
+        # Agora insere todas as subredes que forem encontradas
         for elm in networks_json['networks']:
             try:
                 network = Network(
@@ -189,23 +205,14 @@ class ScanCommands(command.Command):
                 log.error("Endereco de rede invalido!!!\n%s\n%s", elm, e.message)
                 continue
 
-            results = session.query(Network).filter(Network.ip_network == network.ip_network).first()
-            if results is None:
-                log.info("Adicionando a rede: %s", network.ip_network)
+            log.info("Adicionando a rede: %s", network.ip_network)
+            try:
                 session.add(network)
-            else:
-                log.info("Rede já cadastrada: %s. Atualizando informacoes...", network.ip_network)
-                session.execute(
-                    Network.__table__.update().values(
-                        netmask=elm['netmask'],
-                        name=elm['name'],
-                        ip_network=network.ip_network
-                    ).where(
-                        Network.__table__.c.ip_network == network.ip_network
-                    )
-                )
+                session.flush()
+            except IntegrityError as e:
+                log.error("Rede repetida: %s\n%s", elm['ip_network'], e.message)
+                continue
 
-        session.flush()
         session.close()
 
     def scan_networks(self):
