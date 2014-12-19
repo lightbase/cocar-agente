@@ -333,13 +333,18 @@ class ScanCommands(command.Command):
                         Printer.__table__.c.network_ip == printer_dict['network_ip']
                     ).first()
 
-                    printer = Printer(**results._asdict())
-
-                    # Atualiza o serial
-                    log.debug("Atualizando serial %s para a impressora com IP %s", printer_dict['serial'], printer_dict['network_ip'])
-                    printer.serial = printer_dict['serial']
-                    printer = session.merge(printer)
-                    session.flush()
+                    if results is not None:
+                        # Atualiza o serial
+                        log.debug("Atualizando serial %s para a impressora com IP %s",
+                                  printer_dict['serial'], printer_dict['network_ip'])
+                        session.execute(
+                            Printer.__table__.update().values(
+                                serial=printer_dict['serial']
+                            ).where(
+                                Printer.__table__.c.network_ip == printer_dict['network_ip']
+                            )
+                        )
+                        session.flush()
 
                 printer = PrinterCounter(
                     ip_address=printer_dict['network_ip'],
