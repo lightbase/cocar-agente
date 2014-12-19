@@ -661,14 +661,36 @@ class ScanCommands(command.Command):
                                         )
                                     )
                                     session.flush()
+                                else:
+                                    session.execute(
+                                        Host.__table__.update().values(
+                                            name=host.name,
+                                            ports=host.ports,
+                                            ip_network=host.ip_network
+                                        ).where(
+                                            Host.network_ip == hostname
+                                        )
+                                    )
+                                    session.flush()
+
                                     log.info("Informações do host %s atualizadas com sucesso", hostname)
                             else:
                                 log.error("ERRO!!! Host não encontrado com o IP!!! %s", hostname)
                     else:
                         log.info("Impressora com o IP %s já cadastrada. Atualizando informações da subrede", hostname)
-                        results.ip_network = host.ip_network
-                        results.network_ip = host.network_ip
-                        host = session.merge(results)
+                        session.execute(
+                            Host.__table__.update().values(
+                                mac_address=host.mac_address,
+                                name=host.name,
+                                ports=host.ports,
+                                ip_network=host.ip_network
+                            ).where(
+                                Host.network_ip == hostname
+                            )
+                        )
+                        #results.ip_network = host.ip_network
+                        #results.network_ip = host.network_ip
+                        #host = session.merge(results)
                         session.flush()
                 elif isinstance(host, Computer):
                     # Vê se o host já está na base
