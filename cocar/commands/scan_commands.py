@@ -322,6 +322,26 @@ class ScanCommands(command.Command):
 
             try:
                 log.debug("Gravando contador = %s para a impressora = %s serial = %s", printer_dict['counter'], printer_dict['network_ip'], printer_dict['serial'])
+
+                printer = session.query(Printer.__table__).filter(
+                    Printer.__table__.c.serial == printer_dict['serial']
+                ).first()
+
+                if printer is None:
+                    # Tenta encontrar pelo IP
+                    printer = session.query(Printer.__table__).filter(
+                        and_(
+                            Printer.__table__.c.network_ip == printer_dict['network_ip'],
+                            Printer.__table__.c.serial is None
+                        )
+                    ).first()
+
+                    # Atualiza o serial
+                    log.debug("Atualizando serial %s para a impressora com IP %s", printer_dict['serial'], printer_dict['network_ip'])
+                    printer.serial = printer_dict['serial']
+                    printer = session.merge(printer)
+                    session.flush()
+
                 printer = PrinterCounter(
                     ip_address=printer_dict['network_ip'],
                     model=printer_dict['model'],
