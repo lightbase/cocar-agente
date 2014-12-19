@@ -352,7 +352,7 @@ class ScanCommands(command.Command):
                 )
                 printer.update_counter(session)
             except AttributeError, e:
-                log.error("Erro na inserção do contador para a impressora %s\n%s", printer_dict['network_ip'], e.message)
+                log.error("Erro na insercao do contador para a impressora %s\n%s", printer_dict['network_ip'], e.message)
                 continue
 
         # Tell child processes to stop
