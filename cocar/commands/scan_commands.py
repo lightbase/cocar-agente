@@ -666,7 +666,9 @@ class ScanCommands(command.Command):
                                 log.error("ERRO!!! Host não encontrado com o IP!!! %s", hostname)
                     else:
                         log.info("Impressora com o IP %s já cadastrada. Atualizando informações da subrede", hostname)
-                        host = session.merge(host)
+                        results.ip_network = host.ip_network
+                        results.network_ip = host.network_ip
+                        host = session.merge(results)
                         session.flush()
                 elif isinstance(host, Computer):
                     # Vê se o host já está na base
