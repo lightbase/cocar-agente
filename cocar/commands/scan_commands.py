@@ -408,6 +408,9 @@ class ScanCommands(command.Command):
         print("*** Aperente CTRL+C para encerrar a execução ***")
 
         while True:
+            self.import_printers()
+            log.info("FIM DO IMPORT DAS IMPRESSORAS!!! Iniciando coletas...")
+
             self.get_printers()
             log.info("SCAN DE IMPRESSORAS FINALIZADO!!! Iniciando export de coletores")
 
@@ -809,7 +812,8 @@ class ScanCommands(command.Command):
 
         for elm in result_json['printers']:
             printer = Printer(
-                ip_address=elm['network_ip']
+                ip_address=elm['network_ip'],
+                serial=elm['serie']
             )
 
             try:
