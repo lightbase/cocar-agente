@@ -812,7 +812,7 @@ class ScanCommands(command.Command):
 
         for elm in result_json['printers']:
             printer = Printer(
-                ip_address=elm['network_ip'],
+                ip_address=elm['host'],
                 serial=elm['serie']
             )
 
@@ -820,7 +820,7 @@ class ScanCommands(command.Command):
                 session.add(printer)
                 session.flush()
             except IntegrityError as e:
-                log.info("Impressora %s ja cadastrada", elm['network_ip'])
+                log.info("Impressora %s ja cadastrada", elm['host'])
 
         session.close()
 
