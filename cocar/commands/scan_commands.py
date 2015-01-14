@@ -375,6 +375,10 @@ class ScanCommands(command.Command):
                 log.error("Serial com caracteres invalidos\n%s", e.message)
                 continue
 
+            except IntegrityError as e:
+                log.error("Erro impossível de serial que já existe\n%s", e.message)
+                continue
+
         # Tell child processes to stop
         for i in range(processes):
             task_queue.put('STOP')
