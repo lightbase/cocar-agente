@@ -30,7 +30,8 @@ class Computer(Host):
         self.so = so
 
         #SQLAlchemy parameters
-        os_elm = self.so.items()[0]
-        self.so_name = os_elm[1]['osfamily']
-        self.so_version = os_elm[1]['version']
-        self.accuracy = os_elm[1]['accuracy']
+        #os_elm = self.so.items()[0]
+        self.so_name = self.so['so_name']
+        self.accuracy = self.so['accuracy']
+        # FIXME: add version later
+        #self.so_version = os_elm[1]['version']

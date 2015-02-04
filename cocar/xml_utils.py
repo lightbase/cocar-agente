@@ -138,7 +138,10 @@ class NmapXML(object):
                         for os in host['os'].keys():
                             if int(host['os'][os]['accuracy']) > accuracy:
                                 accuracy = int(host['os'][os]['accuracy'])
-                                os_final = os
+                                os_final = {
+                                    'so_name': os,
+                                    'accuracy': accuracy
+                                }
 
                         scantime = int(host.get('endtime')) - int(host.get('starttime'))
                         computer = model.computer.Computer(
@@ -148,7 +151,7 @@ class NmapXML(object):
                             inclusion_date=host.get('endtime'),
                             scantime=scantime,
                             open_ports=host.get('ports'),
-                            so=host['os'][os_final]
+                            so=os_final
                         )
 
                         return computer
@@ -180,7 +183,10 @@ class NmapXML(object):
             for os in host['os'].keys():
                 if int(host['os'][os]['accuracy']) > accuracy:
                     accuracy = int(host['os'][os]['accuracy'])
-                    os_final = os
+                    os_final = {
+                        'so_name': os,
+                        'accuracy': accuracy
+                    }
 
             scantime = int(host.get('endtime')) - int(host.get('starttime'))
             computer = model.computer.Computer(
@@ -190,7 +196,7 @@ class NmapXML(object):
                 inclusion_date=host.get('endtime'),
                 scantime=scantime,
                 open_ports=host.get('ports'),
-                so=host['os'][os_final]
+                so=os_final
             )
 
             return computer
