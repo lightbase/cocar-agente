@@ -8,10 +8,10 @@ Módulo agente coletor para o software Cocar
 Instalação Debian e Ubuntu
 ---------------------------------
 
-Para funcionar é necessário primeiro instalar o pacote da distribuição e só depois criar o virtualenv:
+* Instala o pacote python-netsnmp
 
 <pre>
-virtualenv --system-site-packages -p /usr/bin/python2.7 cocar-agente
+apt-get install python-netsnmp
 </pre>
 
 Instalação RedHat e CentOS
@@ -71,6 +71,14 @@ Type "help", "copyright", "credits" or "license" for more information.
 
 Se não der nenhum erro tudo instalou sem problemas
 
+Configura ambiente virtual
+------------------------------
+
+Só vai funcionar se utilizar o netsnmp do SO
+
+<pre>
+virtualenv --system-site-packages -p python2.7 cocar-agente
+</pre>
 
 Operação
 ================
