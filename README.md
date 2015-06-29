@@ -31,7 +31,7 @@ tar -xzvf net-snmp-5.7.3.tar.gz
 * Instale o repositório software collections do Red Hat e baixe o Python 2.7
 
 <pre>
-yum install centos-release-SCL
+yum install centos-release-SCL make
 yum install python27-python-devel
 </pre>
 
