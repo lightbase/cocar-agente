@@ -38,6 +38,7 @@ class SnmpSession(object):
         """
         Sessão SNMP. Links úteis:
         Lista de MIB's para impressoras: http://www.lprng.com/DISTRIB/SNMPTOOLS/snmp_stuff/test_printer/npstatlib.pm
+        Identificação de swicthes e roteadores: http://www.codeproject.com/Questions/642173/OIDs-for-Router-and-SWITCH-identification-using-SN
 
         :param oid: MIB SNMP
         :param iid: Não sei
@@ -65,6 +66,8 @@ class SnmpSession(object):
                       '.1.3.6.1.4.1.641.2.1.2.1.2.1']
         self.counter = ['.1.3.6.1.2.1.43.10.2.1.4.1.1']
         self.messages = ['.1.3.6.1.2.1.43.18.1.1.8']
+        self.ip_forwarding = ['.1.3.6.1.2.1.4.1']  # Retorna 1 se estiver fazendo IP Forwarding (router)
+        self.bridge = ['.1.3.6.1.2.1.17']  # Retorna 1 se estiver fazendo bridge (switch)
 
     def query(self):
         """Creates SNMP query
