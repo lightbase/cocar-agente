@@ -41,7 +41,7 @@ class TestIdentify(unittest.TestCase):
         self.assertGreater(len(nmap_xml.hosts[hostname]['hostname']), 0)
         self.assertGreater(len(nmap_xml.hosts[hostname]['ports']), 0)
         self.assertGreater(len(nmap_xml.hosts[hostname]['os']), 0)
-        #self.assertGreater(len(nmap_xml.hosts[hostname]['mac']), 0)
+        # self.assertGreater(len(nmap_xml.hosts[hostname]['mac']), 0)
 
     def test_identify_computer(self):
         """
@@ -60,9 +60,13 @@ class TestIdentify(unittest.TestCase):
         self.assertIsInstance(computer, Computer)
 
         # Se é um computer, tenho que identificar o SO
-        self.assertEqual(computer.so_name, 'Linux')
+        print(computer.so_name)
+        print(computer.so_version)
+        self.assertEqual(computer.so_name, 'Linux 3.7 - 3.9')
         self.assertEqual(computer.so_version, 'Linux 3.7 - 3.9')
-        self.assertEqual(computer.accuracy, '98')
+        self.assertEqual(computer.so_vendor, 'Linux')
+        self.assertEqual(computer.so_cpe, 'cpe:/o:linux:linux_kernel:3')
+        self.assertEqual(computer.accuracy, 98)
 
     def test_identify_printer(self):
         """
@@ -80,3 +84,4 @@ class TestIdentify(unittest.TestCase):
         """
         Apaga parâmetros de teste
         """
+        pass

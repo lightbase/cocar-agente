@@ -5,9 +5,8 @@ __author__ = 'eduardo'
 import unittest
 import os
 import os.path
-import shutil
+import cocar.tests
 from ..session import Host, SnmpSession, NmapSession
-from .. import Cocar
 from ..model import network
 from .. import utils
 
@@ -24,8 +23,7 @@ class TestDiscover(unittest.TestCase):
         self.activeip = '127.0.0.1'
         self.inactiveip = '127.1.1.1'
         self.localhost = '127.0.0.1'
-        cocar = Cocar()
-        self.data_dir = cocar.cocar_data_dir
+        self.data_dir = cocar.tests.cocar.cocar_data_dir
 
         local_network = utils.get_local_network()
         self.network = network.Network(
@@ -55,42 +53,55 @@ class TestDiscover(unittest.TestCase):
         """
         Teste que realiza o scan em todas as informações do ativo
         """
-        session = NmapSession(self.localhost)
+        outfile = self.data_dir + "/" + self.localhost + ".xml"
+        session = NmapSession(
+            host=self.localhost,
+            outfile=outfile
+        )
         result = session.scan()
         assert result
 
         # Tenta achar o arquivo
-        outfile = self.data_dir + "/" + self.localhost + ".xml"
         assert (os.path.isfile(outfile))
 
     def test_scan_rede_full(self):
         """
         Realiza busca em todos os IP's da rede e grava resultados num arquivo específico
         """
-        session = NmapSession(self.network.network_ip.cidr)
+        outfile = self.data_dir + "/" + self.network.network_ip.cidr + ".xml"
+        session = NmapSession(
+            host=self.network.network_ip.cidr,
+            outfile=outfile
+        )
         session.scan()
 
         # List all IP's from directory
         self.assertTrue(os.path.isfile(session.outfile))
 
         # Apaga arquivo
-        #os.unlink(session.outfile)
+        os.unlink(session.outfile)
 
     def test_scan_rede(self):
         """
         Realiza busca rápida em todos os IP's da rede e grava resultados num arquivo específico
         """
-        session = NmapSession(self.network.network_ip.cidr, full=False)
+        outfile = self.data_dir + "/" + self.network.network_ip.cidr + ".xml"
+        session = NmapSession(
+            host=self.network.network_ip.cidr,
+            full=False,
+            outfile=outfile
+        )
         session.scan()
 
         # List all IP's from directory
         self.assertTrue(os.path.isfile(session.outfile))
 
         # Apaga arquivo
-        #os.unlink(session.outfile)
+        os.unlink(session.outfile)
 
     def tearDown(self):
         """
         Apaga dados inicias
         """
-        #shutil.rmtree(self.data_dir)
+        # shutil.rmtree(self.data_dir)
+        pass

@@ -16,6 +16,10 @@ class Computer(Host):
     so_name = Column(String)
     so_version = Column(String)
     accuracy = Column(Integer)
+    so_vendor = Column(String)
+    so_os_family = Column(String)
+    so_type = Column(String)
+    so_cpe = Column(String)
 
     def __init__(self,
                  so,
@@ -29,9 +33,13 @@ class Computer(Host):
         Host.__init__(self, *args, **kwargs)
         self.so = so
 
-        #SQLAlchemy parameters
-        #os_elm = self.so.items()[0]
+        # SQLAlchemy parameters
         self.so_name = self.so['so_name']
         self.accuracy = self.so['accuracy']
-        # FIXME: add version later
-        #self.so_version = os_elm[1]['version']
+
+        # Optional parameters
+        self.so_version = self.so.get('version')
+        self.so_vendor = self.so.get('vendor')
+        self.so_os_family = self.so.get('os_family')
+        self.so_type = self.so.get('type')
+        self.so_cpe = self.so.get('cpe')

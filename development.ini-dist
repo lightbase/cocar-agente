@@ -49,7 +49,7 @@ formatter = generic
 
 [handler_file]
 class = handlers.RotatingFileHandler
-args = ('/srv/cocar-agente/cocar-agente.log', 'a', int(20*1024*1024), 10)
+args = ('%(here)s/cocar-agente.log', 'a', int(20*1024*1024), 10)
 level = DEBUG
 formatter = generic
 

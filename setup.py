@@ -18,7 +18,7 @@ requires = [
 
 setup(
     name='cocar-agente',
-    version='1.0',
+    version='1.1.0b1',
     packages=find_packages(),
     include_package_data=True,
     url='http://github.com/lightbase/cocar-agente',
@@ -31,6 +31,7 @@ setup(
     entry_points="""\
         [paste.paster_command]
             scan = cocar.commands:ScanCommands
+            printer = cocar.commands:PrinterCommands
     """,
 
 )

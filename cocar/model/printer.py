@@ -116,7 +116,7 @@ class PrinterCounter(Printer):
                 self.__table__.c.counter_time == self.counter_time
             )
         ).first()
-        #print(results)
+        # print(results)
         if results is None:
             log.debug("Inserindo contador para impressora %s serial %s", self.network_ip, self.serial)
             session.execute(

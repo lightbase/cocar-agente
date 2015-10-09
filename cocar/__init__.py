@@ -35,12 +35,14 @@ class Cocar(object):
         """
         self.config = load_config(environment)
         cocar_data_dir = self.config.get('cocar', 'data_dir')
+        if environment == 'test':
+            # Add test do dir to make sure we protect production data
+            cocar_data_dir += "/tests"
 
-        if os.path.isdir(cocar_data_dir):
-            self.cocar_data_dir = cocar_data_dir
-        else:
+        if not os.path.isdir(cocar_data_dir):
             os.mkdir(cocar_data_dir)
-            self.cocar_data_dir = cocar_data_dir
+
+        self.cocar_data_dir = cocar_data_dir
 
         # SQLAlchemy
         sqlalchemy_url = self.config.get('sqlalchemy', 'url')

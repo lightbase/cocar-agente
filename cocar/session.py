@@ -2,11 +2,9 @@
 # -*- coding: utf-8 -*-
 # Inspired by the code in http://www.copyandwaste.com/posts/view/multiprocessing-snmp-with-python/
 __author__ = 'eduardo'
-
 import netsnmp
 import subprocess
 import logging
-from . import Cocar
 import re
 
 log = logging.getLogger()
@@ -273,7 +271,6 @@ class ArpSession(object):
 
     def scan(self):
         """
-
         :return: Somente MAc
         """
         log.debug("Iniciando scan para o host %s", self.host)
@@ -285,7 +282,7 @@ class ArpSession(object):
                                       "-c",
                                       '1',
                                       "-w",
-                                      self.timeout,
+                                      str(self.timeout),
                                       self.host],
                                      stdout=subprocess.PIPE,
                                      stderr=subprocess.PIPE).communicate()[0]
@@ -294,8 +291,9 @@ class ArpSession(object):
 
             if match:
                 return match.group(2)
+            else:
+                return None
 
-            return match
         except OSError:
             log.error("Install arping: sudo apt-get install arping")
             return None

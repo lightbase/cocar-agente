@@ -5,6 +5,7 @@ from .. import Cocar
 import os
 import os.path
 import logging
+import shutil
 from urlparse import urlparse
 from ..model import Base
 
@@ -30,10 +31,9 @@ def setup_package():
     Setup test data for the package
     """
     log.debug("Diretório de dados do Cocar: %s", cocar.cocar_data_dir)
-    test_dir = cocar.cocar_data_dir + "/tests"
-    if not os.path.isdir(test_dir):
-        log.info("Criando diretório de testes %s", test_dir)
-        os.mkdir(test_dir)
+    if not os.path.isdir(cocar.cocar_data_dir):
+        log.info("Criando diretório de testes %s", cocar.cocar_data_dir)
+        os.mkdir(cocar.cocar_data_dir)
 
     log.info(cocar.engine)
     Base.metadata.create_all(cocar.engine)
@@ -45,4 +45,5 @@ def teardown_package():
     Remove test data
     """
     Base.metadata.drop_all(cocar.engine)
+    shutil.rmtree(cocar.cocar_data_dir)
     pass
