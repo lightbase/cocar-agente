@@ -6,7 +6,9 @@ from lxml import etree
 import model.computer
 import model.printer
 import model.host
+import model.network_device
 from .session import SnmpSession, ArpSession
+from .coleta import Coleta
 
 log = logging.getLogger()
 
@@ -220,8 +222,40 @@ class NmapXML(object):
         :param timeout: Tempo máximo para esperar resposta SNMP
         :return: Dispositivo encontrado ou None
         """
-        # FIXME: Implementar coletas do Cocar
-        return None
+        if not self.hosts:
+            raise AttributeError("It is necessary do load XML file first")
+
+        # Ordena os sistemas operacionais por accuracy
+        host = self.hosts[hostname]
+
+        # 1 - Primeiro busca se tem portas abertas
+        scantime = int(host.get('endtime')) - int(host.get('starttime'))
+
+        snmp_session = Coleta(
+            DestHost=hostname,
+            Timeout=timeout
+        )
+        service = snmp_session.identify_host()
+        if service is None:
+            # Não foi possível identificar o host através de SNMP. Retorna
+            return None
+
+        if service == "application":
+            # Nesse caso é computador ou servidor de aplicação. Retorna
+            return None
+
+        device = model.network_device.NetworkDevice(
+            ip_address=hostname,
+            mac_address=host.get('mac'),
+            hostname=host.get('hostname'),
+            inclusion_date=host.get('endtime'),
+            scantime=scantime,
+            open_ports=host['ports'],
+            service=service,
+            community=snmp_session.Community
+        )
+
+        return device
 
     def check_computer(self,
                        hostname,
@@ -275,7 +309,7 @@ class NmapXML(object):
                 host['mac'] = result
 
             scantime = int(host.get('endtime')) - int(host.get('starttime'))
-            print(os_final)
+            # print(os_final)
             computer = model.computer.Computer(
                 ip_address=hostname,
                 mac_address=host.get('mac'),
