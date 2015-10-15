@@ -12,7 +12,8 @@ requires = [
     'iptools',
     'requests',
     'mock',
-    'alembic'
+    'alembic',
+    'arrow'
 ]
 
 

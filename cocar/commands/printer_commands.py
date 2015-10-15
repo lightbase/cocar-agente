@@ -3,6 +3,7 @@ __author__ = 'eduardo'
 import logging
 import time
 import requests
+import sys
 from paste.script import command
 from .. import Cocar
 from ..model.printer import Printer, PrinterCounter
@@ -351,15 +352,20 @@ class PrinterCommands(command.Command):
         """
         Fica varrendo a rede e tenta encontrar as impressoras a cada 10min
         """
-        self.import_printers()
-        log.info("FIM DO IMPORT DAS IMPRESSORAS!!! Iniciando coletas...")
+        while True:
+            try:
+                self.import_printers()
+                log.info("FIM DO IMPORT DAS IMPRESSORAS!!! Iniciando coletas...")
 
-        self.get_printers()
-        log.info("SCAN DE IMPRESSORAS FINALIZADO!!! Iniciando export de coletores")
+                self.get_printers()
+                log.info("SCAN DE IMPRESSORAS FINALIZADO!!! Iniciando export de coletores")
 
-        self.export_printers()
-        log.info("EXPORT DE IMPRESSORAS FINALIZADO!!! Reiniciando as coletas")
-        #time.sleep(600)
+                self.export_printers()
+                log.info("EXPORT DE IMPRESSORAS FINALIZADO!!! Reiniciando as coletas")
+                #time.sleep(600)
+            except KeyboardInterrupt as e:
+                log.info("IMPRESSORAS - Finalização forçada. Saindo...")
+                sys.exit(0)
 
     @staticmethod
     def make_query_printer(host):

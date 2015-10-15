@@ -3,6 +3,7 @@
 __author__ = 'eduardo'
 import logging
 import os
+import sys
 import os.path
 import lxml.etree
 import time
@@ -128,9 +129,6 @@ class ScanCommands(command.Command):
         if cmd == 'load_network_files':
             self.load_network_files()
             return
-        if cmd == 'continous_scan':
-            self.continuous_scan()
-            return
         if cmd == 'load_file':
             self.load_file()
             return
@@ -142,6 +140,9 @@ class ScanCommands(command.Command):
             return
         if cmd == 'scan_mac_all':
             self.scan_mac_all()
+            return
+        if cmd == 'start':
+            self.start()
             return
         else:
             log.error('Command "%s" not recognized' % (cmd,))
@@ -269,22 +270,6 @@ class ScanCommands(command.Command):
 
         self.options.networks = onlyfiles
         return self.load_file()
-
-    def continuous_scan(self):
-        """
-        Fica varrendo a rede até parar por execução forçada
-        """
-        log.info("Carregando informações das subredes...")
-        self.load_networks()
-
-        log.info("Iniciando scan de redes...")
-        self.scan_networks()
-
-        log.info("Scan de redes finalizado. Iniciando procedimento de "
-                 "identificação de ativos de rede, computadores e impressoras")
-
-        self.load_network_files()
-        log.info("SCAN DE REDE COMPLETO FINALIZADO!!!")
 
     def scan_mac_all(self):
         """
@@ -621,6 +606,26 @@ class ScanCommands(command.Command):
         for i in range(processes):
             task_queue.put('STOP')
 
+    def start(self):
+        """
+        Fica varrendo a rede até parar por execução forçada
+        """
+        while True:
+            try:
+                log.info("Carregando informações das subredes...")
+                self.load_networks()
+
+                log.info("Iniciando scan de redes...")
+                self.scan_networks()
+
+                log.info("Scan de redes finalizado. Iniciando procedimento de "
+                         "identificação de ativos de rede, computadores e impressoras")
+
+                self.load_network_files()
+                log.info("SCAN DE REDE COMPLETO FINALIZADO!!!")
+            except KeyboardInterrupt as e:
+                log.info("Finalização forçada. Saindo...")
+                sys.exit(0)
 
 def make_query(host):
     """This does the actual snmp query

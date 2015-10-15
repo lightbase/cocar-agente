@@ -5,6 +5,7 @@ from paste.script import command
 from multiprocessing import Process, Queue
 from .. import Cocar
 from ..coleta import Coleta
+from ..model.network_device import NetworkDevice, NetworkDeviceInterface
 
 log = logging.getLogger()
 
@@ -86,7 +87,7 @@ class NetworkDeviceCommands(command.Command):
 
         # Timeout mínimo
         if self.options.timeout is None:
-            self.options.timeout = "30"
+            self.options.timeout = "1000"
 
         # Desabilita cisco por padrão
         if self.options.cisco is None:
@@ -100,10 +101,37 @@ class NetworkDeviceCommands(command.Command):
             self.identify_host()
             return
 
+    def identify_host(self):
+        """
+        Identifica host utilizando o serviço
+        """
+        if self.options.hosts is None:
+            print("O parâmetro hosts (-i) é obrigatório")
+            return
+        elif type(self.options.hosts) != list:
+            self.options.hosts = [self.options.hosts]
+
+        for host in self.options.hosts:
+            snmp_session = Coleta(
+                DestHost=host,
+                Timeout=self.options.timeout
+            )
+
+            if snmp_session is None:
+                log.error("Erro na coleta SNMP do host %s", host)
+                continue
+            else:
+                result = snmp_session.identify_host()
+                if result is not None:
+                    print("HOST = %s SERVICE = %s" % (host, result))
+                else:
+                    print("Nenhum serviço identificado para o host %s" % host)
+
     def coleta_snmp(self):
         """
         Coleta geral SNMP do dispositivo
         """
+        session = self.cocar.Session
         if self.options.hosts is None:
             print("O parâmetro hosts (-i) é obrigatório")
             return
@@ -134,7 +162,23 @@ class NetworkDeviceCommands(command.Command):
         # Get and print results
         log.debug('Unordered results:')
         for i in range(len(self.options.hosts)):
-            result_dict = done_queue.get()
+            result_tuple = done_queue.get()
+            if result_tuple is not None:
+                # Armazena o novo dispositivo de rede
+                device = NetworkDevice(
+                    service=result_tuple[0],
+                    uptime=result_tuple[1],
+                    version=result_tuple[2],
+                    location=result_tuple[3],
+                    contact=result_tuple[4],
+                    avg_busy1=result_tuple[5],
+                    avg_busy5=result_tuple[6],
+                    memory=result_tuple[7],
+                    ip_forward=result_tuple[8],
+                    bridge=result_tuple[9],
+                    ip_address=result_tuple[10],
+
+                )
 
         # Tell child processes to stop
         for i in range(processes):
@@ -155,29 +199,3 @@ class NetworkDeviceCommands(command.Command):
         for func in iter(inp.get, 'STOP'):
             result = self.make_query_coleta(func)
             output.put(result)
-
-    def identify_host(self):
-        """
-        Identifica host utilizando o serviço
-        """
-        if self.options.hosts is None:
-            print("O parâmetro hosts (-i) é obrigatório")
-            return
-        elif type(self.options.hosts) != list:
-            self.options.hosts = [self.options.hosts]
-
-        for host in self.options.hosts:
-            snmp_session = Coleta(
-                DestHost=host,
-                Timeout=self.options.timeout
-            )
-
-            if snmp_session is None:
-                log.error("Erro na coleta SNMP do host %s", host)
-                continue
-            else:
-                result = snmp_session.identify_host()
-                if result is not None:
-                    print("HOST = %s SERVICE = %s" % (host, result))
-                else:
-                    print("Nenhum serviço identificado para o host %s" % host)

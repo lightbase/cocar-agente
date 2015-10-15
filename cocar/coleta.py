@@ -48,6 +48,17 @@ class Coleta(session.SnmpSession):
         self.cm_system_modems_in_use = [".1.3.6.1.4.1.9.9.47.1.1.6.0"]  # Modems em uso nos ativos CISCO
         self.cm_system_modems_dead = [".1.3.6.1.4.1.9.9.47.1.1.10.0"]  # Modems falhando em ativos CISCO
 
+        # Interfaces de rede
+        self.if_index = [".1.3.6.1.2.1.2.2.1.1"]
+        self.if_descr = [".1.3.6.1.2.1.2.2.1.2"]
+        self.description = [".1.3.6.1.2.1.31.1.1.1.18"]
+        self.ip = [".1.3.6.1.2.1.4.20.1.1"]
+        self.ip_order = [".1.3.6.1.2.1.4.20.1.2"]
+        self.if_admin_status = [".1.3.6.1.2.1.2.2.1.7"]
+        self.if_oper_status = [".1.3.6.1.2.1.2.2.1.8"]
+        self.last_change = [".1.3.6.1.2.1.2.2.1.9"]
+        self.if_mac = [".1.3.6.1.2.1.2.2.1.6"]
+
         # Definições genéricas de opções válidas no escopo do objeto
         self.service_options = {
             1: "repeater",
@@ -72,10 +83,10 @@ class Coleta(session.SnmpSession):
         """
         service = None
         for elm in self.services:
-            self.var = netsnmp.Varbind(elm, iid=None)
-            status = self.query()
             if service is not None:
                 break
+            self.var = netsnmp.Varbind(elm, iid=None)
+            status = self.query()
             if status.query is not None:
                 for response in status.query:
                     if response is not None:
@@ -131,7 +142,6 @@ class Coleta(session.SnmpSession):
         """
         oids = self.services +\
             self.sys_up_time +\
-            self.why_reload +\
             self.version +\
             self.location +\
             self.contact +\
@@ -161,5 +171,11 @@ class Coleta(session.SnmpSession):
         # 'Sitting on the Dock of the Bay', 'Me <me@example.org>', None, None, None, None, None
         # )
         print(result.query)
+        if result.query is None:
+            return None
+
+        saida = result.query
+        saida.append(self.DestHost)
+        saida.append(self.Community)
 
         return result
