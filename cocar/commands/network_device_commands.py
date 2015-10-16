@@ -164,21 +164,46 @@ class NetworkDeviceCommands(command.Command):
         for i in range(len(self.options.hosts)):
             result_tuple = done_queue.get()
             if result_tuple is not None:
-                # Armazena o novo dispositivo de rede
-                device = NetworkDevice(
-                    service=result_tuple[0],
-                    uptime=result_tuple[1],
-                    version=result_tuple[2],
-                    location=result_tuple[3],
-                    contact=result_tuple[4],
-                    avg_busy1=result_tuple[5],
-                    avg_busy5=result_tuple[6],
-                    memory=result_tuple[7],
-                    ip_forward=result_tuple[8],
-                    bridge=result_tuple[9],
-                    ip_address=result_tuple[10],
+                # Primeiro tenta encontrar o dispositivo de rede ou Host
+                results = session.query(NetworkDevice.__table__).filter(
+                    NetworkDevice.__table__.c.network_ip == result_tuple[10]
+                ).first()
 
-                )
+                if results is None:
+                    log.debug("Adicionando novo dispositivo de rede para o IP %s" % result_tuple[10])
+                    # Armazena o novo dispositivo de rede
+                    device = NetworkDevice(
+                        service=result_tuple[0],
+                        uptime=result_tuple[1],
+                        version=result_tuple[2],
+                        location=result_tuple[3],
+                        contact=result_tuple[4],
+                        avg_busy1=result_tuple[5],
+                        avg_busy5=result_tuple[6],
+                        memory=result_tuple[7],
+                        ip_forward=result_tuple[8],
+                        bridge=result_tuple[9],
+                        ip_address=result_tuple[10]
+                    )
+                    session.add(device)
+                    session.flush()
+                else:
+                    # Atualiza para valores encontrados
+                    NetworkDevice.__table__.update().values(
+                        service=result_tuple[0],
+                        uptime=result_tuple[1],
+                        version=result_tuple[2],
+                        location=result_tuple[3],
+                        contact=result_tuple[4],
+                        avg_busy1=result_tuple[5],
+                        avg_busy5=result_tuple[6],
+                        memory=result_tuple[7],
+                        ip_forward=result_tuple[8],
+                        bridge=result_tuple[9]
+                    ).where(
+                        NetworkDevice.__table__.c.network_ip == result_tuple[10]
+                    )
+                    session.flush()
 
         # Tell child processes to stop
         for i in range(processes):
