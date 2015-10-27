@@ -139,6 +139,23 @@ class Coleta(session.SnmpSession):
         Coleta geral do Host
 
         :param cisco: Habilitar coleta cisco?
+        :return: Tupla no seguinte formato:
+            (
+                '72',  # Serviços
+                '1408608',  # Uptime
+                'Linux se-128156 3.13.0-66-generic #108-Ubuntu SMP Wed Oct 7 15:20:27 UTC 2015 x86_64', # Versão do SO
+                'Sitting on the Dock of the Bay',  # Localização
+                'Me <me@example.org>', # Contato
+                None, # Processador últimos 5min
+                None, # Procesador último 1min
+                None, # Memória
+                None, # Trabalhando com IP Forwarding (FW)?
+                None, # Trabalhando como Bridge?
+                'localhost', # Endereço do Host
+                'public' # SNMP community
+            )
+
+            TODO: Habilitar a coleta Cisco. Por enquanto não coleta
         """
         oids = self.services +\
             self.sys_up_time +\
@@ -165,17 +182,11 @@ class Coleta(session.SnmpSession):
         # Run the SNMP query
         result = self.getbulk()
 
-        # Resultado:
-        # (
-        # '72', '1221085', None, 'Linux se-128156 3.13.0-65-generic #106-Ubuntu SMP Fri Oct 2 22:08:27 UTC 2015 x86_64',
-        # 'Sitting on the Dock of the Bay', 'Me <me@example.org>', None, None, None, None, None
-        # )
-        print(result.query)
         if result.query is None:
             return None
 
         saida = result.query
-        saida.append(self.DestHost)
-        saida.append(self.Community)
+        saida += (self.DestHost, )
+        saida += (self.Community, )
 
-        return result
+        return saida

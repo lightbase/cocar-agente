@@ -157,7 +157,7 @@ class NetworkDeviceCommands(command.Command):
 
         # Start worker processes
         for i in range(processes):
-            Process(target=NetworkDeviceCommands.worker_coleta, args=(task_queue, done_queue)).start()
+            Process(target=self.worker_coleta, args=(task_queue, done_queue)).start()
 
         # Get and print results
         log.debug('Unordered results:')
