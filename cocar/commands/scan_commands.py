@@ -9,12 +9,13 @@ import lxml.etree
 import time
 import pickle
 import requests
+import arrow
 from paste.script import command
 from .. import Cocar
 from ..model import Base
 from ..model.network import Network
 from ..model.printer import Printer, PrinterCounter
-from ..model.host import Host
+from ..model.host import Host, HostArping
 from ..model.computer import Computer
 from ..csv_utils import NetworkCSV
 from ..session import NmapSession, SnmpSession, ArpSession
@@ -275,11 +276,15 @@ class ScanCommands(command.Command):
         """
         Fica varrendo a rede tentando arrumar os MAC's
         """
-        print("*** Aperente CTRL+C para encerrar a execução ***")
+        print("*** Aperte CTRL+C para encerrar a execução ***")
 
         while True:
-            self.scan_mac()
-            log.info("SCAN DE MAC FINALIZADO!!!")
+            try:
+                self.scan_mac()
+                log.info("SCAN DE MAC FINALIZADO!!!")
+            except KeyboardInterrupt as e:
+                log.info("Execução interrompida! Finalizando...")
+                sys.exit(0)
 
     def load_file(self):
         """
@@ -545,15 +550,12 @@ class ScanCommands(command.Command):
             result = arp.scan()
 
             if result is not None:
-                log.debug("Atualizando MAC = %s para  host = %s", result, host)
-                session.execute(
-                    Host.__table__.update().values(
-                        mac_address=result
-                    ).where(
-                        Host.network_ip == host
-                    )
+                host = HostArping(
+                    mac_address=result,
+                    network_ip=host,
+                    ping_date=arrow.now().datetime
                 )
-                session.flush()
+                host.update_ping(session)
 
         session.close()
 
@@ -589,16 +591,15 @@ class ScanCommands(command.Command):
                 log.error("Nao foi possivel encontrar o mac do host %s", host_list[0])
                 continue
             try:
-                log.debug("Atualizando MAC = %s para  host = %s", host_list[1], host_list[0])
-                session.execute(
-                    Host.__table__.update().values(
-                        mac_address=host_list[1]
-                    ).where(
-                        Host.network_ip == host_list[0]
-                    )
+                # Adiciona entrada de ping
+                host = HostArping(
+                    mac_address=host_list[1],
+                    network_ip=host_list[0],
+                    ping_date=arrow.now().datetime
                 )
-                session.flush()
-            except AttributeError, e:
+                host.update_ping(session)
+
+            except AttributeError as e:
                 log.error("Erro na atualização do MAC para host %s\n%s", host_list[0], e.message)
                 continue
 

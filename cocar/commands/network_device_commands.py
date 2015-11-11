@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 __author__ = 'eduardo'
 import logging
+import sys
 from paste.script import command
 from multiprocessing import Process, Queue
 from .. import Cocar
@@ -224,3 +225,28 @@ class NetworkDeviceCommands(command.Command):
         for func in iter(inp.get, 'STOP'):
             result = self.make_query_coleta(func)
             output.put(result)
+
+    def coleta_devices(self):
+        """
+        Executa a coleta de todos os dispositivos de rede
+        """
+        session = self.cocar.Session
+        self.options.hosts = list()
+        results = session.query(NetworkDevice).all()
+        for device in results:
+            self.options.hosts.append(device.network_ip)
+
+        # Executa a coleta dos dispositivos
+        self.coleta_snmp()
+
+    def start(self):
+        """
+        Executa as coletas de todos os ativos de rede
+        """
+        while True:
+            try:
+                self.coleta_devices()
+
+            except KeyboardInterrupt as e:
+                log.info("Finalização forçada. Saindo...")
+                sys.exit(0)

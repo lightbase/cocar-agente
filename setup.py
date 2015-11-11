@@ -34,6 +34,7 @@ setup(
             scan = cocar.commands:ScanCommands
             printer = cocar.commands:PrinterCommands
             network_device = cocar.commands:NetworkDeviceCommands
+            computer = cocar.commands:ComputerCommands
     """,
 
 )
