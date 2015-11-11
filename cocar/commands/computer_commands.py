@@ -85,6 +85,10 @@ class ComputerCommands(command.Command):
             self.export_computers()
             return
 
+        if cmd == 'start':
+            self.start()
+            return
+
     def export_computers(self):
         """
         Exporta todos os contadores para o Cocar
