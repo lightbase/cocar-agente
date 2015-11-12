@@ -13,8 +13,8 @@ from sqlalchemy import and_, insert, update
 from . import Base
 from .network import Network
 
-
 log = logging.getLogger()
+
 
 class Host(Base):
     """
@@ -266,4 +266,3 @@ class HostArping(Base):
         else:
             log.error("Erro na remoção da ping para o MAC = %s. Status code = %s", self.mac_address, response.status)
             return False
-

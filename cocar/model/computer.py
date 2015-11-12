@@ -33,7 +33,7 @@ class Computer(Host):
         Classe que identifica uma estação de trabalho
         :param so: Sistema Operacional encontrado
         """
-        Host.__init__(self, *args, **kwargs)
+        super(Computer, self).__init__(*args, **kwargs)
         self.so = so
 
         # SQLAlchemy parameters
@@ -46,6 +46,21 @@ class Computer(Host):
         self.so_os_family = self.so.get('os_family')
         self.so_type = self.so.get('type')
         self.so_cpe = self.so.get('cpe')
+
+    def __repr__(self):
+        """
+        Lista atributos da classe
+        """
+        return "<Computer('%s, %s, %s, %s, %s, %s, %s, %s')>" % (
+            self.network_ip,
+            self.so_name,
+            self.so_version,
+            self.accuracy,
+            self.so_vendor,
+            self.so_os_family,
+            self.so_type,
+            self.so_cpe
+        )
 
     def export_computer(self, server_url, session):
         """
