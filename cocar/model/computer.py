@@ -51,25 +51,9 @@ class Computer(Host):
         """
         Exporta todos os contadores para a impressora
         """
-        #query = session.query(
-        #    PrinterCounter
-        #).filter(
-        #    PrinterCounter.__table__.c.network_ip == self.network_ip
-        #)
+        counter_list = session.query(HostArping).all()
 
-        stm = """SELECT host.network_ip as ip_address,
-                    host.inclusion_date,
-                    host.scantime,
-                    host_arping.mac_address,
-                    host_arping.ping_date
-                FROM host
-                JOIN host_arping ON host.network_ip = host_arping.network_ip
-                WHERE host_arping.mac_address = '%s'""" % self.mac_address
-
-        counter_list = session.execute(stm, mapper=HostArping).fetchall()
-
-        for elm in counter_list:
-            counter = HostArping(**elm)
+        for counter in counter_list:
             #print(counter)
             server_url += '/api/computer/'
             dados = {

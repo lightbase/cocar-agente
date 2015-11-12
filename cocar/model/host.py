@@ -86,7 +86,7 @@ class Host(Base):
         )
     
     
-class HostArping(Host):
+class HostArping(Base):
     """
     Entrada de ping do host
     """
@@ -94,13 +94,13 @@ class HostArping(Host):
     mac_address = Column(String(18), nullable=False, primary_key=True)
     network_ip = Column(String(16), ForeignKey("host.network_ip"), nullable=False)
     ping_date = Column(DateTime, nullable=False, default=arrow.now().datetime, primary_key=True)
+    ip_network = Column(String(16), ForeignKey('network.ip_network'), nullable=True)
     
     def __init__(self,
                  mac_address,
                  network_ip,
                  ping_date,
-                 *args,
-                 **kwargs):
+                 ip_network=None):
         """
         Método construtor
 
@@ -109,19 +109,20 @@ class HostArping(Host):
         :param ping_date: Data da entrada
         :return:
         """
-        super(HostArping, self).__init__(*args, **kwargs)
         self.mac_address = mac_address
         self.network_ip = network_ip
         self.ping_date = ping_date
+        self.ip_network = ip_network
 
     def __repr__(self):
         """
         Metodo que passa a lista de parametros da classe
         """
-        return "<HostArping('%s, %s, %s')>" % (
+        return "<HostArping('%s, %s, %s, %s')>" % (
             self.mac_address,
             self.network_ip,
-            self.ping_date
+            self.ping_date,
+            self.ip_network
         )
 
     def update_ping(self, session):
@@ -130,6 +131,11 @@ class HostArping(Host):
         :param session: Sessão do SQLAlchemy
         :return boolean: Verdadeiro ou Falso
         """
+        # Descobre host
+        host = session.query(Host).filter(
+            Host.network_ip == self.network_ip
+        )
+
         retorno = False
         results = session.query(self.__table__).filter(
             and_(
@@ -144,46 +150,48 @@ class HostArping(Host):
                 self.__table__.insert().values(
                     mac_address=self.mac_address,
                     network_ip=self.network_ip,
-                    ping_date=self.ping_date
+                    ping_date=self.ping_date,
+                    ip_network=host.ip_network
                 )
             )
             retorno = True
 
         # Atualiza o MAC Address do Host
-        host = session.query(
-            Host.__table__
-        ).filter(
-            Host.mac_address == self.mac_address
-        ).first()
-        if host is None:
-            # Atualiza o MAC do IP atual
-            log.debug("Atualizando MAC = %s para  host = %s", self.mac_address, self.network_ip)
-            session.execute(
-                Host.__table__.update().values(
-                    mac_address=self.mac_address
-                ).where(
-                    Host.network_ip == self.network_ip
-                )
-            )
-        else:
-            # Verifica se já existe o IP
-            host_old = session.query(
+        if host.mac_address != self.mac_address:
+            host = session.query(
                 Host.__table__
             ).filter(
-                Host.network_ip == self.network_ip
+                Host.mac_address == self.mac_address
             ).first()
-
-            if host_old is not None:
-                # Como o Ip ja existe, trata-se de uma mudança de MAC
-                # Regra: somente o ultimo IP ativo fica com o MAC. O anterior fica nulo
-                log.debug("Removendo MAC do host = %s", self.network_ip)
+            if host is None:
+                # Atualiza o MAC do IP atual
+                log.debug("Atualizando MAC = %s para  host = %s", self.mac_address, self.network_ip)
                 session.execute(
                     Host.__table__.update().values(
-                        mac_address=None
+                        mac_address=self.mac_address
                     ).where(
-                        Host.network_ip == host_old.network_ip
+                        Host.network_ip == self.network_ip
                     )
                 )
+            else:
+                # Verifica se já existe o IP
+                host_old = session.query(
+                    Host.__table__
+                ).filter(
+                    Host.network_ip == self.network_ip
+                ).first()
+
+                if host_old is not None:
+                    # Como o Ip ja existe, trata-se de uma mudança de MAC
+                    # Regra: somente o ultimo IP ativo fica com o MAC. O anterior fica nulo
+                    log.debug("Removendo MAC do host = %s", self.network_ip)
+                    session.execute(
+                        Host.__table__.update().values(
+                            mac_address=None
+                        ).where(
+                            Host.network_ip == host_old.network_ip
+                        )
+                    )
 
         session.flush()
         return retorno

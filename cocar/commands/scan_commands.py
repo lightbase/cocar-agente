@@ -628,6 +628,7 @@ class ScanCommands(command.Command):
                 log.info("Finalização forçada. Saindo...")
                 sys.exit(0)
 
+
 def make_query(host):
     """This does the actual snmp query
 
@@ -655,6 +656,7 @@ def worker(inp, output):
     for func in iter(inp.get, 'STOP'):
         result = make_query(func)
         output.put(result)
+
 
 # Function run by worker processes
 def worker_mac(inp, output):
