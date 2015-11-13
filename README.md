@@ -35,7 +35,7 @@ yum install centos-release-SCL make
 yum install python27-python-devel
 yum install perl-CPAN
 yum install gcc
-yum install libxml2-devel libxslt-devel
+yum install libxml2-devel libxslt-devel nmap
 </pre>
 
 * Agora habilite o Python recentement instalado e setuptools
