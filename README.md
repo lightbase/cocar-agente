@@ -33,6 +33,7 @@ tar -xzvf net-snmp-5.7.3.tar.gz
 <pre>
 yum install centos-release-SCL make
 yum install python27-python-devel
+yum install perl-CPAN
 </pre>
 
 * Agora habilite o Python recentement instalado
