@@ -35,6 +35,7 @@ yum install centos-release-SCL make
 yum install python27-python-devel
 yum install perl-CPAN
 yum install gcc
+yum install libxml2-devel libxslt-devel
 </pre>
 
 * Agora habilite o Python recentement instalado e setuptools
@@ -98,6 +99,41 @@ cd cocar-agente-1.0
 python setup.py develop
 </pre>
 
+Configuração
+======================
+
+* Crie diretório de dados
+
+<pre>
+mkdir /usr/local/lightbase/cocar-data
+</pre>
+
+* Crie o arquivo de configuração
+
+<pre>
+cd /usr/local/lightbase/src/cocar-agente-1.0
+cp development.ini-dist production.ini
+vim production.ini
+</pre>
+
+* Preencha as configurações
+
+<pre>
+[alembic]
+# path to migration scripts
+script_location = alembic
+sqlalchemy.url = sqlite:////usr/local/lightbase/cocar-agente/cocar_data/cocar.db
+
+[cocar]
+data_dir = /usr/local/lightbase/cocar-agente/cocar_data
+networks_csv = /usr/local/lightbase/cocar-agente/cocar_data/networks.csv
+processes = 4
+server_url = http://localhost/cocar  # Essa deve ser a URL do Cocar
+
+[sqlalchemy]
+url = sqlite:////usr/local/lightbase/cocar-agente/cocar_data/cocar.db
+</pre>
+
 Operação
 ================
 
@@ -106,17 +142,18 @@ Descrição dos principais comandos de operação
 * Varredura contínua de rede
 
 <pre>
-/srv/cocar-agente/bin/paster scan continous_scan
+/usr/local/lightbase/cocar-agente/bin/paster scan continous_scan
 </pre>
 
 * Leitura e export do contador das impressoras
 
 <pre>
-/srv/cocar-agente/bin/paster scan printer_scan -t 10000000
+/usr/local/lightbase/cocar-agente/bin/paster scan printer_scan -t 10000000
 </pre>
 
 * Coleta de MAC address que não foi inicialmente identificado
 
 <pre>
-/srv/cocar-agente/bin/paster scan scan_mac_all -a eth0 -t 10
+/usr/local/lightbase/cocar-agente/bin/paster scan scan_mac_all -a eth0 -t 10
 </pre>
+
