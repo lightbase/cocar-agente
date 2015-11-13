@@ -272,6 +272,7 @@ class NmapSession(object):
         Realiza busca Nmap
         :return:
         """
+        log.debug("NMAP: Scanning host %s", self.host)
         try:
             if self.full:
                 scanv = subprocess.Popen(["sudo",

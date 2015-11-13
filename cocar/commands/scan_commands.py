@@ -247,9 +247,12 @@ class ScanCommands(command.Command):
             Process(target=worker, args=(task_queue, done_queue)).start()
 
         # Get and print results
-        print 'Unordered results:'
+        print 'Resultado do Scan:'
+        log.debug('Resultado do Scan:')
         for i in range(len(results)):
-            print '\t', done_queue.get()
+            output = done_queue.get()
+            print ('\t Host: %s \t Resultado: %s' % (output['host'], output['result']))
+            log.debug('\t Host: %s \t Resultado: %s' % (output['host'], output['result']))
 
         # Tell child processes to stop
         for i in range(processes):
@@ -637,7 +640,10 @@ def make_query(host):
     allows a user to customize mass queries with
     subsets of different hostnames and community strings
     """
-    return host.scan()
+    return {
+        'result': host.scan(),
+        'host': host.host
+    }
 
 
 def make_query_mac(host):
