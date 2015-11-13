@@ -80,7 +80,22 @@ Configura ambiente virtual
 Só vai funcionar se utilizar o netsnmp do SO
 
 <pre>
+mkdir /usr/local/lightbase
+easy_install virtualenv
+cd /usr/local/lightbase
 virtualenv --system-site-packages -p python2.7 cocar-agente
+</pre>
+
+* Baixa os fontes
+
+<pre>
+cd /usr/local/lightbase
+mkdir src
+# Escolha seu release
+wget https://github.com/lightbase/cocar-agente/archive/1.0.tar.gz
+tar -xzvf 1.0.tar.gz
+cd cocar-agente-1.0
+python setup.py develop
 </pre>
 
 Operação
