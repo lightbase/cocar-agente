@@ -33,12 +33,16 @@ tar -xzvf net-snmp-5.7.3.tar.gz
 <pre>
 yum install centos-release-SCL make
 yum install python27-python-devel
+yum install perl-CPAN
+yum install gcc
+yum install libxml2-devel libxslt-devel nmap
 </pre>
 
-* Agora habilite o Python recentement instalado
+* Agora habilite o Python recentement instalado e setuptools
 
 <pre>
 source /opt/rh/python27/enable
+wget https://bootstrap.pypa.io/ez_setup.py -O - | /opt/rh/python27/root/usr/bin/python
 </pre>
 
 * Finalmente compile fornecendo os diretórios do Python recentemente instalado
@@ -77,7 +81,57 @@ Configura ambiente virtual
 Só vai funcionar se utilizar o netsnmp do SO
 
 <pre>
+mkdir /usr/local/lightbase
+easy_install virtualenv
+cd /usr/local/lightbase
 virtualenv --system-site-packages -p python2.7 cocar-agente
+</pre>
+
+* Baixa os fontes
+
+<pre>
+cd /usr/local/lightbase
+mkdir src
+# Escolha seu release
+wget https://github.com/lightbase/cocar-agente/archive/1.0.tar.gz
+tar -xzvf 1.0.tar.gz
+cd cocar-agente-1.0
+python setup.py develop
+</pre>
+
+Configuração
+======================
+
+* Crie diretório de dados
+
+<pre>
+mkdir /usr/local/lightbase/cocar-data
+</pre>
+
+* Crie o arquivo de configuração
+
+<pre>
+cd /usr/local/lightbase/src/cocar-agente-1.0
+cp development.ini-dist production.ini
+vim production.ini
+</pre>
+
+* Preencha as configurações
+
+<pre>
+[alembic]
+# path to migration scripts
+script_location = alembic
+sqlalchemy.url = sqlite:////usr/local/lightbase/cocar-agente/cocar_data/cocar.db
+
+[cocar]
+data_dir = /usr/local/lightbase/cocar-agente/cocar_data
+networks_csv = /usr/local/lightbase/cocar-agente/cocar_data/networks.csv
+processes = 4
+server_url = http://localhost/cocar  # Essa deve ser a URL do Cocar
+
+[sqlalchemy]
+url = sqlite:////usr/local/lightbase/cocar-agente/cocar_data/cocar.db
 </pre>
 
 Operação
@@ -88,17 +142,18 @@ Descrição dos principais comandos de operação
 * Varredura contínua de rede
 
 <pre>
-/srv/cocar-agente/bin/paster scan continous_scan
+/usr/local/lightbase/cocar-agente/bin/paster scan continous_scan
 </pre>
 
 * Leitura e export do contador das impressoras
 
 <pre>
-/srv/cocar-agente/bin/paster scan printer_scan -t 10000000
+/usr/local/lightbase/cocar-agente/bin/paster scan printer_scan -t 10000000
 </pre>
 
 * Coleta de MAC address que não foi inicialmente identificado
 
 <pre>
-/srv/cocar-agente/bin/paster scan scan_mac_all -a eth0 -t 10
+/usr/local/lightbase/cocar-agente/bin/paster scan scan_mac_all -a eth0 -t 10
 </pre>
+
