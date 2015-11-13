@@ -34,12 +34,14 @@ tar -xzvf net-snmp-5.7.3.tar.gz
 yum install centos-release-SCL make
 yum install python27-python-devel
 yum install perl-CPAN
+yum install gcc
 </pre>
 
-* Agora habilite o Python recentement instalado
+* Agora habilite o Python recentement instalado e setuptools
 
 <pre>
 source /opt/rh/python27/enable
+wget https://bootstrap.pypa.io/ez_setup.py -O - | sudo python
 </pre>
 
 * Finalmente compile fornecendo os diretórios do Python recentemente instalado
