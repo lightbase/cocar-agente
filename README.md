@@ -41,7 +41,7 @@ yum install gcc
 
 <pre>
 source /opt/rh/python27/enable
-wget https://bootstrap.pypa.io/ez_setup.py -O - | sudo python
+wget https://bootstrap.pypa.io/ez_setup.py -O - | /opt/rh/python27/root/usr/bin/python
 </pre>
 
 * Finalmente compile fornecendo os diretórios do Python recentemente instalado
