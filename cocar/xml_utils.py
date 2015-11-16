@@ -77,7 +77,7 @@ class NmapXML(object):
                 for osmatch in os.findall('osmatch'):
                     self.hosts[host]['os'][osmatch.get('name')] = dict()
                     self.hosts[host]['os'][osmatch.get('name')]['accuracy'] = osmatch.get('accuracy')
-                    for osclass in osmatch.findall('osclass'):
+                    for osclass in os.findall('osclass'):
                         self.hosts[host]['os'][osmatch.get('name')]['osclass'] = {
                             'type': osclass.get('type'),
                             'vendor': osclass.get('vendor'),

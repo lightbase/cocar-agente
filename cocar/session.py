@@ -50,6 +50,11 @@ class SnmpSession(object):
         self.DestHost = DestHost
         self.Community = Community
         self.Verbose = Verbose
+
+        # Corrige Timeout que não pode ser None
+        if Timeout is None:
+            Timeout = 1000000
+
         self.Timeout = Timeout
         self.var = netsnmp.Varbind(oid, iid)
         self.var_list = list()
