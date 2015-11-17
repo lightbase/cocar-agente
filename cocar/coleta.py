@@ -94,7 +94,7 @@ class Coleta(session.SnmpSession):
                         # Só preciso de uma resposta
                         break
 
-        if service is None:
+        if service is None or service == '':
             return None
 
         # Tudo o que for maior que 64 representa um computador que não será coletado via SNMP
