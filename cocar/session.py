@@ -315,7 +315,7 @@ class ArpSession(object):
     def __init__(self,
                  host,
                  iface='eth0',
-                 timeout='10'):
+                 timeout='1'):
         """
         :param host: Endereço IP do host a ser escaneado
         :param mac: MAC address do host
@@ -323,7 +323,10 @@ class ArpSession(object):
         """
         self.host = host
         self.iface = iface
-        self.timeout = timeout
+        if timeout is not None and timeout != '':
+            self.timeout = timeout
+        else:
+            self.timeout = '1'
 
     def scan(self):
         """
@@ -382,3 +385,31 @@ class ArpSession(object):
         except OSError:
             log.error("Install arping: sudo apt-get install arping")
             return None
+
+    def ping(self):
+        """
+        Executa ping no host
+
+        :return: True or False
+        """
+        log.debug("Executando ping para o host %s", self.host)
+        try:
+            scanv = subprocess.Popen(
+                ["ping",
+                 "-c",
+                 "1",
+                 "-W",
+                 self.timeout,
+                 self.host],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE
+            ).communicate()[0]
+
+            if scanv == 0:
+                return True
+            else:
+                return False
+
+        except OSError as e:
+            log.error("Ping error:\n%s" % e.message)
+            return False

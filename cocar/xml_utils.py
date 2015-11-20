@@ -97,7 +97,7 @@ class NmapXML(object):
 
     def identify_host(self,
                       hostname,
-                      timeout=10):
+                      timeout=2):
         """
         Identifica o host seguindo a heurística:
 

@@ -692,23 +692,20 @@ class ScanCommands(command.Command):
         # Get and print results
         print 'Unordered results:'
         for i in range(len(results)):
-            host_list = done_queue.get()
-            log.debug(host_list)
-            if host_list[1] is None:
-                log.error("Nao foi possivel encontrar o mac do host %s", host_list[0])
-                continue
-            try:
-                # Adiciona entrada de ping
-                host = HostArping(
-                    mac_address=host_list[1],
-                    network_ip=host_list[0],
-                    ping_date=arrow.now().datetime
-                )
-                host.update_ping(session)
+            host_result = done_queue.get()
+            if host_result['result']:
+                try:
+                    # Adiciona entrada de ping
+                    host = HostArping(
+                        mac_address=host_result['mac'],
+                        network_ip=host_result['host'],
+                        ping_date=arrow.now().datetime
+                    )
+                    host.update_ping(session)
 
-            except AttributeError as e:
-                log.error("Erro na atualização do MAC para host %s\n%s", host_list[0], e.message)
-                continue
+                except AttributeError as e:
+                    log.error("Erro na operação de ping para o host %s\n%s", host_result['host'], e.message)
+                    continue
 
         # Tell child processes to stop
         for i in range(processes):
@@ -758,7 +755,18 @@ def make_query_mac(host):
     allows a user to customize mass queries with
     subsets of different hostnames and community strings
     """
-    return host.scan_list()
+    mac = host.scan()
+    if mac is None:
+        # Não conseguiu encontrar o MAC. Só pinga
+        result = host.ping()
+    else:
+        result = True
+
+    return {
+        'result': result,
+        'host': host.host,
+        'mac': mac
+    }
 
 
 # Function run by worker processes
