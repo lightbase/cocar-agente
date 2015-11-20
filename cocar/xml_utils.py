@@ -304,7 +304,7 @@ class NmapXML(object):
                 if result is None:
                     # Não posso retornar MAC vazio de jeito nenhum
                     log.error("IDENTIFY - MAC not found for host %s. Fail!", hostname)
-                    return None
+                    #return None
 
                 host['mac'] = result
 
