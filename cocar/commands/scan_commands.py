@@ -463,7 +463,6 @@ class ScanCommands(command.Command):
                                 session.execute(
                                     Computer.__table__.insert().values(
                                         network_ip=hostname,
-                                        open_ports=host.open_ports,
                                         so_name=host.so_name,
                                         so_version=host.so_version,
                                         accuracy=host.accuracy,
