@@ -17,6 +17,7 @@ from ..model.network import Network
 from ..model.printer import Printer, PrinterCounter
 from ..model.host import Host, HostArping
 from ..model.computer import Computer
+from ..model.network_device import NetworkDevice
 from ..csv_utils import NetworkCSV
 from ..session import NmapSession, SnmpSession, ArpSession
 from multiprocessing import Process, Queue
@@ -446,6 +447,75 @@ class ScanCommands(command.Command):
                         #results.network_ip = host.network_ip
                         #host = session.merge(results)
                         session.flush()
+                elif isinstance(host, NetworkDevice):
+                    # Vê se o host já está na base
+                    results = session.query(NetworkDevice).filter(NetworkDevice.network_ip == hostname).first()
+                    if results is None:
+                        log.info("Inserindo computador com o IP %s", hostname)
+                        try:
+                            session.merge(host)
+                            session.flush()
+                        except IntegrityError as e:
+                            log.error("Erro adicionando computador com o IP %s. IP Repetido\n%s", hostname, e.message)
+                            # Pode haver um host cadastrado que não havia sido identificado como computador
+                            teste = session.query(Host).filter(Host.network_ip == hostname).first()
+                            if teste is not None:
+                                # Adiciona o computador
+                                session.execute(
+                                    NetworkDevice.__table__.insert().values(
+                                        network_ip=hostname,
+                                        service=host.service,
+                                        community=host.community
+                                    )
+                                )
+                                log.info("NetworkDevice %s adicionado novamente com sucesso", hostname)
+
+                                # Agora atualiza informações do host
+                                if host.mac_address is not None:
+                                    session.execute(
+                                        Host.__table__.update().values(
+                                            mac_address=host.mac_address,
+                                            scantime=host.scantime,
+                                            name=host.name,
+                                            ports=host.ports,
+                                            ip_network=host.ip_network
+                                        ).where(
+                                            Host.network_ip == hostname
+                                        )
+                                    )
+                                    session.flush()
+                                else:
+                                    session.execute(
+                                        Host.__table__.update().values(
+                                            scantime=host.scantime,
+                                            name=host.name,
+                                            ports=host.ports,
+                                            ip_network=host.ip_network
+                                        ).where(
+                                            Host.network_ip == hostname
+                                        )
+                                    )
+                                    session.flush()
+
+                                    log.info("Informações do host %s atualizadas com sucesso", hostname)
+                            else:
+                                log.error("ERRO!!! Host não encontrado com o IP!!! %s", hostname)
+                    else:
+                        log.info("Computador com o IP %s já cadastrado", hostname)
+                        # Agora atualiza informações do host
+                        if host.mac_address is not None:
+                            session.execute(
+                                Host.__table__.update().values(
+                                    mac_address=host.mac_address,
+                                    name=host.name,
+                                    ports=host.ports,
+                                    ip_network=host.ip_network
+                                ).where(
+                                    Host.network_ip == hostname
+                                )
+                            )
+                            session.flush()
+                            log.info("Informações do host %s atualizadas com sucesso", hostname)
                 elif isinstance(host, Computer):
                     # Vê se o host já está na base
                     results = session.query(Computer).filter(Computer.network_ip == hostname).first()
@@ -472,7 +542,7 @@ class ScanCommands(command.Command):
                                         so_cpe=host.so_cpe
                                     )
                                 )
-                                log.info("Computador %s adicionada novamente com sucesso", hostname)
+                                log.info("Computador %s adicionado novamente com sucesso", hostname)
 
                                 # Agora atualiza informações do host
                                 if host.mac_address is not None:
@@ -491,7 +561,6 @@ class ScanCommands(command.Command):
                                 else:
                                     session.execute(
                                         Host.__table__.update().values(
-                                            mac_address=host.mac_address,
                                             scantime=host.scantime,
                                             name=host.name,
                                             ports=host.ports,
