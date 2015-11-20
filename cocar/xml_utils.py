@@ -98,6 +98,18 @@ class NmapXML(object):
     def identify_host(self,
                       hostname,
                       timeout=10):
+        """
+        Identifica o host seguindo a heurística:
+
+        1 - É impressora
+        2 - Se não for, é um dispositivo de rede
+        3 - É um computador
+        4 - Cai no host genérico
+
+        :param hostname: Endereço do Host
+        :param timeout: Timeout para as operações de SNMP e Ping
+        :return:
+        """
         if not self.hosts:
             raise AttributeError("It is necessary do load XML file first")
 

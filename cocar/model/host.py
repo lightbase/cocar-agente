@@ -91,21 +91,21 @@ class HostArping(Base):
     Entrada de ping do host
     """
     __tablename__ = 'host_arping'
-    mac_address = Column(String(18), nullable=False, primary_key=True)
-    network_ip = Column(String(16), ForeignKey("host.network_ip"), nullable=False)
+    network_ip = Column(String(16), ForeignKey("host.network_ip"), nullable=False, primary_key=True)
     ping_date = Column(DateTime, nullable=False, default=arrow.now().datetime, primary_key=True)
+    mac_address = Column(String(18), nullable=False)
     ip_network = Column(String(16), ForeignKey('network.ip_network'), nullable=True)
     
     def __init__(self,
-                 mac_address,
                  network_ip,
                  ping_date,
+                 mac_address=None,
                  ip_network=None):
         """
         Método construtor
 
-        :param mac_address: MAC do dispositivo. Será considerado a chave
         :param network_ip: Ip do dispositivo
+        :param mac_address: MAC do dispositivo.
         :param ping_date: Data da entrada
         :return:
         """
@@ -139,13 +139,13 @@ class HostArping(Base):
         retorno = False
         results = session.query(self.__table__).filter(
             and_(
-                self.__table__.c.mac_address == self.mac_address,
+                self.__table__.c.network_ip == self.network_ip,
                 self.__table__.c.ping_date == self.ping_date
             )
         ).first()
         if results is None:
             # Insere uma nova entrada
-            log.debug("Inserindo entrada de ping para o MAC %s", self.mac_address)
+            log.debug("Inserindo entrada de ping para o Host %s", self.network_ip)
             session.execute(
                 self.__table__.insert().values(
                     mac_address=self.mac_address,
@@ -243,13 +243,13 @@ class HostArping(Base):
             response.raise_for_status()
         except HTTPError as e:
             # Something got wrong, raise error
-            log.error("Erro ao exportar ping para o MAC = %s\n%s", self.mac_address, response.text)
+            log.error("Erro ao exportar ping para o Host = %s\n%s", self.network_ip, response.text)
             log.error(e.message)
             return False
 
         if response.status_code == 200:
-            log.info("ping para o MAC = %s em %s "
-                     "exportado com sucesso", self.mac_address, self.ping_date)
+            log.info("ping para o Host = %s em %s "
+                     "exportado com sucesso", self.network_ip, self.ping_date)
 
             # Remove o ping
             session.execute(
@@ -264,5 +264,5 @@ class HostArping(Base):
             session.flush()
             return True
         else:
-            log.error("Erro na remoção da ping para o MAC = %s. Status code = %s", self.mac_address, response.status)
+            log.error("Erro na remoção da ping para o Host = %s. Status code = %s", self.network_ip, response.status)
             return False
