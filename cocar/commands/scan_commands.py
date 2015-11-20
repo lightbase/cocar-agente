@@ -452,24 +452,60 @@ class ScanCommands(command.Command):
                     if results is None:
                         log.info("Inserindo computador com o IP %s", hostname)
                         try:
-                            session.add(host)
+                            session.merge(host)
                             session.flush()
-                        except IntegrityError, e:
+                        except IntegrityError as e:
                             log.error("Erro adicionando computador com o IP %s. IP Repetido\n%s", hostname, e.message)
-                            # Agora atualiza informações do host
-                            if host.mac_address is not None:
+                            # Pode haver um host cadastrado que não havia sido identificado como computador
+                            teste = session.query(Host).filter(Host.network_ip == hostname).first()
+                            if teste is not None:
+                                # Adiciona o computador
                                 session.execute(
-                                    Host.__table__.update().values(
-                                        mac_address=host.mac_address,
-                                        name=host.name,
-                                        ports=host.ports,
-                                        ip_network=host.ip_network
-                                    ).where(
-                                        Host.network_ip == hostname
+                                    Computer.__table__.insert().values(
+                                        network_ip=hostname,
+                                        open_ports=host.open_ports,
+                                        so_name=host.so_name,
+                                        so_version=host.so_version,
+                                        accuracy=host.accuracy,
+                                        so_vendor=host.so_vendor,
+                                        so_os_family=host.so_os_family,
+                                        so_type=host.so_type,
+                                        so_cpe=host.so_cpe
                                     )
                                 )
-                                session.flush()
-                                log.info("Informações do host %s atualizadas com sucesso", hostname)
+                                log.info("Computador %s adicionada novamente com sucesso", hostname)
+
+                                # Agora atualiza informações do host
+                                if host.mac_address is not None:
+                                    session.execute(
+                                        Host.__table__.update().values(
+                                            mac_address=host.mac_address,
+                                            scantime=host.scantime,
+                                            name=host.name,
+                                            ports=host.ports,
+                                            ip_network=host.ip_network
+                                        ).where(
+                                            Host.network_ip == hostname
+                                        )
+                                    )
+                                    session.flush()
+                                else:
+                                    session.execute(
+                                        Host.__table__.update().values(
+                                            mac_address=host.mac_address,
+                                            scantime=host.scantime,
+                                            name=host.name,
+                                            ports=host.ports,
+                                            ip_network=host.ip_network
+                                        ).where(
+                                            Host.network_ip == hostname
+                                        )
+                                    )
+                                    session.flush()
+
+                                    log.info("Informações do host %s atualizadas com sucesso", hostname)
+                            else:
+                                log.error("ERRO!!! Host não encontrado com o IP!!! %s", hostname)
                     else:
                         log.info("Computador com o IP %s já cadastrado", hostname)
                         # Agora atualiza informações do host
