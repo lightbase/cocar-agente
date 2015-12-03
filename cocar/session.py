@@ -337,12 +337,12 @@ class ArpSession(object):
             scanv = subprocess.Popen(["sudo",
                                       "arping",
                                       "-I",
-                                      self.iface,
+                                      str(self.iface),
                                       "-c",
-                                      '1',
+                                      "1",
                                       "-w",
                                       str(self.timeout),
-                                      self.host],
+                                      str(self.host)],
                                      stdout=subprocess.PIPE,
                                      stderr=subprocess.PIPE).communicate()[0]
 
@@ -394,7 +394,7 @@ class ArpSession(object):
         """
         log.debug("Executando ping para o host %s", self.host)
         try:
-            scanv = subprocess.Popen(
+            child = subprocess.Popen(
                 ["ping",
                  "-c",
                  "1",
@@ -403,9 +403,10 @@ class ArpSession(object):
                  self.host],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE
-            ).communicate()[0]
+            )
+            scanv = child.communicate()[0]
 
-            if scanv == 0:
+            if child.returncode == 0:
                 return True
             else:
                 return False

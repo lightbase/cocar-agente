@@ -134,7 +134,7 @@ class HostArping(Base):
         # Descobre host
         host = session.query(Host).filter(
             Host.network_ip == self.network_ip
-        )
+        ).first()
 
         retorno = False
         results = session.query(self.__table__).filter(

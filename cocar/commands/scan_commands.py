@@ -704,7 +704,7 @@ class ScanCommands(command.Command):
                     host.update_ping(session)
 
                 except AttributeError as e:
-                    log.error("Erro na operação de ping para o host %s\n%s", host_result['host'], e.message)
+                    log.error("Erro na operacao de ping para o host %s\n%s", host_result['host'], e.message)
                     continue
 
         # Tell child processes to stop
