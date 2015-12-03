@@ -221,7 +221,7 @@ class HostArping(Base):
         counter_json = {
             'ip_address': self.network_ip,
             'mac_address': self.mac_address,
-            'ping_date': self.serial,
+            'ping_date': self.ping_date,
             'local': name,
             'netmask': netmask
         }
