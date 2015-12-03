@@ -219,9 +219,10 @@ class HostArping(Base):
 
         export_url = server_url + self.mac_address
         counter_json = {
-            'ip_address': self.network_ip,
+            'host': self.network_ip,
             'mac_address': self.mac_address,
             'ping_date': self.ping_date,
+            'network_ip': self.network_ip,
             'local': name,
             'netmask': netmask
         }
