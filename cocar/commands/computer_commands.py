@@ -95,11 +95,8 @@ class ComputerCommands(command.Command):
         """
         session = self.cocar.Session
         results = session.query(Computer).join(
-            Host.__table__,
-            Host.network_ip == Computer.network_ip
-        ).join(
             HostArping.__table__,
-            HostArping.network_ip == Host.network_ip
+            HostArping.network_ip == Computer.network_ip
         ).all()
         for computer in results:
             log.info("Exportando computador %s", computer.mac_address)

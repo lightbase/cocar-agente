@@ -217,12 +217,11 @@ class HostArping(Base):
             name = network.name
             netmask = network.netmask
 
-        export_url = server_url + self.mac_address
+        export_url = server_url + self.network_ip
         counter_json = {
             'host': self.network_ip,
             'mac_address': self.mac_address,
-            'ping_date': self.ping_date,
-            'network_ip': self.network_ip,
+            'ping_date': self.ping_date.strftime('%Y-%m-%d %H:%M:%S'),
             'local': name,
             'netmask': netmask
         }

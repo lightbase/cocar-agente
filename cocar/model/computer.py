@@ -66,11 +66,11 @@ class Computer(Host):
         """
         Exporta todos os contadores para a impressora
         """
+        server_url += '/api/computador/'
         counter_list = session.query(HostArping).all()
 
         for counter in counter_list:
             #print(counter)
-            server_url += '/api/computer/'
             dados = {
                 'so_name': self.so_name,
                 'so_version': self.so_version,
@@ -82,10 +82,10 @@ class Computer(Host):
             }
             result = counter.export_ping(server_url, session, dados)
             if result:
-                log.info("Ping em %s para o computador %s exportado com sucesso", counter.ping_date, self.mac_address)
+                log.info("Ping em %s para o computador %s exportado com sucesso", counter.ping_date, self.network_ip)
             else:
-                log.error("Erro na remocao do ping %s para o computador %s", counter.ping_date, self.serial)
+                log.error("Erro na remocao do ping %s para o computador %s", counter.ping_date, self.network_ip)
                 return False
 
-        log.info("EXPORT DO COMPUTADOR %s FINALIZADO!!! %s PING EXPORTADOS!!!", self.mac_address, len(counter_list))
+        log.info("EXPORT DO COMPUTADOR %s FINALIZADO!!! %s PING EXPORTADOS!!!", self.network_ip, len(counter_list))
         return True
