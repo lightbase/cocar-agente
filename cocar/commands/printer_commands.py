@@ -57,6 +57,13 @@ class PrinterCommands(command.Command):
         help='Timeout da consulta SNMP'
     )
 
+    parser.add_option(
+        '-i', '--ip',
+        action='store',
+        dest='hosts',
+        help='Hosts list to scan'
+    )
+
     def __init__(self, name):
         """
         Constructor method
