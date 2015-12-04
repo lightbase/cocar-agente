@@ -146,6 +146,9 @@ class ScanCommands(command.Command):
         if cmd == 'start':
             self.start()
             return
+        if cmd == 'export_computers':
+            self.export_computers()
+            return
         else:
             log.error('Command "%s" not recognized' % (cmd,))
 
@@ -286,6 +289,9 @@ class ScanCommands(command.Command):
             try:
                 self.scan_mac()
                 log.info("SCAN DE MAC FINALIZADO!!!")
+
+                self.export_computers()
+                log.info("COMPUTADORES EXPORTADOS!!!")
             except KeyboardInterrupt as e:
                 log.info("Execução interrompida! Finalizando...")
                 sys.exit(0)
@@ -731,6 +737,22 @@ class ScanCommands(command.Command):
             except KeyboardInterrupt as e:
                 log.info("Finalização forçada. Saindo...")
                 sys.exit(0)
+
+    def export_computers(self):
+        """
+        Exporta todos os contadores para o Cocar
+        """
+        session = self.cocar.Session
+        results = session.query(Computer).join(
+            HostArping.__table__,
+            HostArping.network_ip == Computer.network_ip
+        ).all()
+        for computer in results:
+            log.info("Exportando computador %s", computer.mac_address)
+            computer.export_computer(server_url=self.cocar.config.get('cocar', 'server_url'), session=session)
+
+        session.close()
+        log.info("EXPORT DOS COMPUTADORES FINALIZADO!!! %s PING EXPORTADOS!!!", len(results))
 
 
 def make_query(host):
