@@ -34,6 +34,7 @@ tar -xzvf net-snmp-5.7.3.tar.gz
 yum install centos-release-SCL make
 yum install python27-python-devel
 yum install perl-CPAN
+yum install perl-devel
 yum install gcc
 yum install libxml2-devel libxslt-devel nmap
 </pre>
@@ -93,8 +94,8 @@ virtualenv --system-site-packages -p python2.7 cocar-agente
 cd /usr/local/lightbase
 mkdir src
 # Escolha seu release
-wget https://github.com/lightbase/cocar-agente/archive/1.0.tar.gz
-tar -xzvf 1.0.tar.gz
+wget https://github.com/lightbase/cocar-agente/archive/master.zip
+unzip master.zip
 cd cocar-agente-1.0
 python setup.py develop
 </pre>
@@ -137,7 +138,21 @@ url = sqlite:////usr/local/lightbase/cocar-agente/cocar_data/cocar.db
 Operação
 ================
 
-Descrição dos principais comandos de operação
+Descrição dos principais comandos de operação. Esses comandos devem ser executados na raiz do cocar-agente, portanto em /usr/local/lightbase/src/cocar-agente-1.0
+
+* Cria o banco de dados
+
+<pre>
+/usr/local/lightbase/cocar-agente/bin/paster scan create_db
+</pre>
+
+* Inicia a verredura 
+
+<pre>
+/usr/local/lightbase/cocar-agente/bin/paster paster computer start -t 1 -w 1
+</pre>
+
+
 
 * Varredura contínua de rede
 
