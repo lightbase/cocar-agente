@@ -135,21 +135,24 @@ server_url = http://localhost/cocar  # Essa deve ser a URL do Cocar
 url = sqlite:////usr/local/lightbase/cocar-agente/cocar_data/cocar.db
 </pre>
 
-* (CentOS) Copie os scripts para a pasta /etc/init 
+* (CentOS) Copie os scripts para a pasta /etc/init
 
+<pre>
 cd /usr/local/lightbase/src/cocar-agente-1.0
 cp scripts/* /etc/init/
+</pre>
 
 * (CentOS) Rode os comandos
 
+<pre>
 sudo initctl start cocar_computer
 sudo initctl start cocar_scan
 sudo initctl start cocar_scan_mac_all
+</pre>
 
 
-
-Pronto!
-Aguarde 3 horas para ver os relatórios em http://cocar_url/cocar/computador
+* Pronto!
+* Aguarde 3 horas para ver os relatórios em http://cocar_url/cocar/computador
 
 
 
